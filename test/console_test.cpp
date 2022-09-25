@@ -1,8 +1,13 @@
 #include "gtest/gtest.h"
-#include "../headers/console.h"
+#include "../headers/Console.h"
 
 TEST(consoleTest, constructorWorks) {
-    console cons{};
+    Console cons{};
+}
+
+TEST(consoleTest, testing) {
     std::cout << sizeof(std::size_t) << std::endl;
-    EXPECT_EQ (0, 0);
+    std::cout << sizeof(long long int) << std::endl;
+    size_t s{23};
+    std::cout << s << std::endl;
 }

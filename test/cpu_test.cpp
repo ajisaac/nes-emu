@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 #include "../headers/Cpu.h"
-#include "../headers/console.h"
+#include "../headers/Console.h"
 
 TEST(cpuTest, testConstruction) {
-    console console{};
+    Console console{};
 }

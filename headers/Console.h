@@ -5,7 +5,7 @@
 #include "Cpu.h"
 #include "Ram.h"
 
-class console {
+class Console {
     /* it contains busses, a clock, the Cpu, ppu, cartridge - it's our master program */
 private:
     std::bitset<16> address_bus{0}; // our 16 bit bus
@@ -15,9 +15,9 @@ private:
     Cpu cpu{&ram};
 
 public:
-    console();
+    Console();
 
-    ~console();
+    ~Console();
 
     void run();
 };

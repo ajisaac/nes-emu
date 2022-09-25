@@ -1,7 +1,7 @@
 #include <cstddef>
 #include <iostream>
 #include <bitset>
-#include "../headers/console.h"
+#include "../headers/Console.h"
 
 
 std::ostream &operator<<(std::ostream &os, std::byte b) {
@@ -9,7 +9,7 @@ std::ostream &operator<<(std::ostream &os, std::byte b) {
 }
 
 int main(int argc, char *argv[]) {
-    console console{};
+    Console console{};
     console.run();
     return 0;
 }
