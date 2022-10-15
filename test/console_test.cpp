@@ -8,6 +8,6 @@ TEST(consoleTest, constructorWorks) {
 TEST(consoleTest, testing) {
     std::cout << sizeof(std::size_t) << std::endl;
     std::cout << sizeof(long long int) << std::endl;
-    size_t s{23};
+    size_t s{25};
     std::cout << s << std::endl;
 }
