@@ -10,6 +10,5 @@ std::ostream &operator<<(std::ostream &os, std::byte b) {
 int main() {
     Console console{};
     console.run();
-    std::cout << "Hi " << std::endl;
     return 0;
 }
