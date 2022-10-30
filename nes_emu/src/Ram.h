@@ -1,5 +1,6 @@
 #pragma once
 #include <cstddef>
+#include <exception>
 
 class Ram
 {
@@ -31,5 +32,7 @@ class Ram
 
 	/* now we hit the cartridge, it goes from 0x4020 to 0x8000, 32kb - 32b*/
 	std::byte* cartridge = &total_ram[0x4020];
+public:
+	Ram() {}
 };
 

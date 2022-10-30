@@ -1,7 +1,10 @@
 #include "gtest/gtest.h"
-#include "pch.h"
+#include "Ram.cpp"
 
-TEST(RamTest, TestName) {
-	EXPECT_EQ(1, 1);
-	EXPECT_TRUE(true);
+TEST(RamTest, can_construct_ram) {
+	Ram ram{};
+}
+
+TEST(RamTest, can_construct_ram_2) {
+	Ram ram{};
 }

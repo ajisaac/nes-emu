@@ -1,7 +1,9 @@
 #include "gtest/gtest.h"
-#include "pch.h"
-#include "../nes_emu/src/Console.h"
+#include "Console.cpp"
+#include "Cpu.cpp"
+
 
 TEST(ConsoleTest, can_construct_console) {
 	Console console{};
+	console.run();
 }
