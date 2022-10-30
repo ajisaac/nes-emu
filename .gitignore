@@ -1,5 +1,2 @@
-.cmake
-cmake-build-debug
-CMakeFiles
-.idea
-lib
+
+.vs
