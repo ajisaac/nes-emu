@@ -1,4 +1,4 @@
-#include "../headers/Console.h"
+#include "Console.h"
 #include <bitset>
 #include <cstddef>
 #include <iostream>
