@@ -5,7 +5,8 @@ Console::Console() = default;
 void Console::run() {
     // load rom
     // start running
-    cpu.step();
+    while (true)
+        cpu.step();
 }
 
 Console::~Console() = default;

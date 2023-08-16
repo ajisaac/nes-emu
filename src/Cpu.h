@@ -24,6 +24,9 @@ class Cpu {
     std::bitset<8> x_register{0x0};   // $X
     std::bitset<8> y_register{0x0};   // $Y
 
+    template<size_t N>
+    static void increment(std::bitset<N> &bitset);
+
     Ram *ram;
 
     enum class instruction;
@@ -36,6 +39,8 @@ class Cpu {
     explicit Cpu(Ram *ram);
 
     void step();
+
+    void execute(instruction instruction1);
 };
 
 #endif  // CPPTEST_CPU_H

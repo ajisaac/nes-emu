@@ -4,6 +4,7 @@
 #include <cstddef>
 
 class Ram {
+
     /* this is all our memory mapping information */
     std::byte total_ram[0xFFFF]{std::byte{0}};
 

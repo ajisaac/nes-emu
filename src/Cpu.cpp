@@ -4,13 +4,64 @@
 
 Cpu::Cpu(Ram *ram) { this->ram = ram; }
 
+enum class Cpu::addressing_mode {
+    INDEXED_D_X,       // val = PEEK((arg + X) % 256)
+    INDEXED_D_Y,       // val = PEEK((arg + Y) % 256)
+    INDEXED_A_X,       // val = PEEK(arg + X)
+    INDEXED_A_Y,       // val = PEEK(arg + Y)
+    INDEXED_INDIRECT,  // val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
+    INDIRECT_INDEXED,  // val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
+};
+
+template<size_t N>
+void Cpu::increment(std::bitset<N> &bitset) {
+    for (size_t s = 0; s < N; s++) {
+        if (bitset[s] == 0) {
+            bitset[s] = 1;
+            break;
+        }
+        bitset[s] = 0;
+    }
+    std::cout << bitset << std::endl;
+}
+
+void Cpu::step() {
+    // Step 1, we may be waiting some cycles for some reason
+
+    // Step 2, we should handle interupts
+
+    // Step 3, decode opcode by looking at the current program counter
+    instruction inst = decode();
+
+    // Step 4, increase program counter by 1
+
+    // Step 5, execute instruction
+    execute(inst);
+
+    // step 4
+    // set $pc to next instruction
+    increment(program_counter);
+
+    // step 5
+    // fetch data per memory access mode
+
+    // step 6
+    // execute instruction with memory fetched
+}
+
+Cpu::instruction Cpu::decode() {
+    instruction result;
+    return result;
+}
+
+
 enum class Cpu::instruction {
 
     // LOAD AND STORE operations.
     // You load a register from memory, you store a register to memory.
     // Transfers a single byte between memory and one of the registers
     // Load operations set the negative and zero flags depending on the value
-    // transferred
+    // transferred.
     // Store operations do not affect the flag
     LDA,  // LOAD A  - N,Z
     LDX,  // LOAD X  - N,Z
@@ -151,56 +202,123 @@ enum class Cpu::instruction {
 
 };
 
-enum class Cpu::addressing_mode {
-    INDEXED_D_X,       // val = PEEK((arg + X) % 256)
-    INDEXED_D_Y,       // val = PEEK((arg + Y) % 256)
-    INDEXED_A_X,       // val = PEEK(arg + X)
-    INDEXED_A_Y,       // val = PEEK(arg + Y)
-    INDEXED_INDIRECT,  // val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1)
-                       // % 256) * 256)
-    INDIRECT_INDEXED,  // val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 +
-                       // Y)
-};
+void Cpu::execute(Cpu::instruction inst) {
+    switch (inst) {
 
-// will overflow
-template <size_t N>
-static void increment(std::bitset<N> &bitset) {
-    for (size_t s = 0; s < N; s++) {
-        if (bitset[s] == 0) {
-            bitset[s] = 1;
+        // load store instructions
+        case instruction::LDA:
             break;
-        }
-        bitset[s] = 0;
+        case instruction::LDX:
+            break;
+        case instruction::LDY:
+            break;
+        case instruction::STA:
+            break;
+        case instruction::STX:
+            break;
+        case instruction::STY:
+            break;
+
+        case instruction::TAX:
+            break;
+        case instruction::TAY:
+            break;
+        case instruction::TXA:
+            break;
+        case instruction::TYA:
+            break;
+        case instruction::TSX:
+            break;
+        case instruction::TXS:
+            break;
+        case instruction::PHA:
+            break;
+        case instruction::PHP:
+            break;
+        case instruction::PLA:
+            break;
+        case instruction::PLP:
+            break;
+        case instruction::AND:
+            break;
+        case instruction::EOR:
+            break;
+        case instruction::ORA:
+            break;
+        case instruction::BIT:
+            break;
+        case instruction::ADC:
+            break;
+        case instruction::SBC:
+            break;
+        case instruction::CMP:
+            break;
+        case instruction::CPX:
+            break;
+        case instruction::CPY:
+            break;
+        case instruction::INC:
+            break;
+        case instruction::INX:
+            break;
+        case instruction::INY:
+            break;
+        case instruction::DEC:
+            break;
+        case instruction::DEX:
+            break;
+        case instruction::DEY:
+            break;
+        case instruction::ASL:
+            break;
+        case instruction::LSR:
+            break;
+        case instruction::ROL:
+            break;
+        case instruction::ROR:
+            break;
+        case instruction::JMP:
+            break;
+        case instruction::JSR:
+            break;
+        case instruction::RTS:
+            break;
+        case instruction::BCC:
+            break;
+        case instruction::BCS:
+            break;
+        case instruction::BEQ:
+            break;
+        case instruction::BMI:
+            break;
+        case instruction::BNE:
+            break;
+        case instruction::BPL:
+            break;
+        case instruction::BVC:
+            break;
+        case instruction::BVS:
+            break;
+        case instruction::CLC:
+            break;
+        case instruction::CLD:
+            break;
+        case instruction::CLI:
+            break;
+        case instruction::CLV:
+            break;
+        case instruction::SEC:
+            break;
+        case instruction::SED:
+            break;
+        case instruction::SEI:
+            break;
+        case instruction::BRK:
+            break;
+        case instruction::NOP:
+            break;
+        case instruction::RTI:
+            break;
     }
-    std::cout << bitset << std::endl;
 }
 
-void Cpu::step() {
-    // set $pc to memory location of instruction
-    // probably start at some memory location and keep on going
-
-    // step 2
-    // check if we reach special end condition, if so then end program
-
-    // step 3
-    // decode CPU instruction at $pc
-    instruction inst = decode();
-
-    // step 4
-    // set $pc to next instruction
-    increment(program_counter);
-
-    // step 5
-    // fetch data per memory access mode
-
-    // step 6
-    // execute instruction with memory fetched
-
-    // step 7
-    // goto step 2
-}
-
-Cpu::instruction Cpu::decode() {
-    instruction result;
-    return result;
-}
