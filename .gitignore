@@ -1,6 +1,1 @@
-*.o
-.cmake
-cmake-build-debug
-CMakeFiles
-.idea
-lib
+/target
