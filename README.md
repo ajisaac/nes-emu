@@ -1,5 +1,4 @@
-# nes emulator in rust
+# nintendo emulator
 
-I've always wanted to write a nes emulator, it was my first gaming console and
-the reason I love computers to this day.
+I've always wanted to write a nes emulator, and this is in Java, because why not. 
 
