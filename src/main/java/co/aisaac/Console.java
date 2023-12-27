@@ -1,11 +1,17 @@
-use crate::apu::Apu;
-use crate::cartridge::Cartridge;
-use crate::cpu::Cpu;
-use crate::ppu::Ppu;
+package co.aisaac;
+
+public class Console {
+	/*
 
 /// console owns all of the smaller components.
 /// you load a cartridge into a console.
 /// you can reset a cpu
+
+//    std::bitset<16> address_bus{0};  // our 16 bit bus
+//    std::bitset<8> data_bus{0};      // 8-bit data bus
+//    std::bitset<8> control_bus{0};   // 8-bit control bus
+//    Ram ram{};
+//    Cpu cpu{&ram};
 
 pub struct Console {
     /// cpu is the 6502 processor
@@ -42,6 +48,8 @@ impl Console {
     }
 
     pub(crate) fn load_cartridge(&self, p0: &str) {
+        /// the .nes format should return a cartridge
+        /// this format is documented
         todo!()
     }
 
@@ -81,5 +89,5 @@ impl Console {
         ///?
         todo!()
     }
-
+	 */
 }
