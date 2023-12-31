@@ -3,9 +3,8 @@ package co.aisaac;
 public class Main {
 	public static void main(String[] args) {
 		System.out.println("Hello world!");
-		Console console = new Console();
+		String rom = "/Users/Shared/roms/Nintendo/Castlevania.nes";
+		Console console = new Console(rom);
 		console.run();
-//		console.load("nestest.nes");
-//		console.run();
 	}
 }

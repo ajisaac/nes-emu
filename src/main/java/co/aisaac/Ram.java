@@ -11,7 +11,7 @@ public class Ram {
 	0x0000 to 0x00FF -> 256 bytes of zero-page ram
 	*/
 
-	byte[] ram = new byte[2000];
+	byte[] ram = new byte[2048];
 
 	byte read(short address) {
 		return ram[address];

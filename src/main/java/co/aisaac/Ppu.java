@@ -4,4 +4,8 @@ public class Ppu {
 	public Ppu(Ram ram) {
 
 	}
+
+	public void step() {
+
+	}
 }

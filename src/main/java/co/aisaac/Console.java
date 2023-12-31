@@ -6,21 +6,29 @@ public class Console {
 	Ppu ppu;
 	Apu apu;
 
-	public Console() {
-		/// create a new console
+	Cartridge cartridge;
+	Controller controller1;
+	Controller controller2;
+	Mapper mapper;
+
+	public Console(String rom) {
+		Cartridge cartridge = new Cartridge(rom);
+
+		controller1 = new Controller();
+		controller2 = new Controller();
+
+		// ram starts out blank
 		Ram ram = new Ram();
+		Mapper mapper = new Mapper(ram);
 		Cpu cpu = new Cpu(ram);
 		Ppu ppu = new Ppu(ram);
 		Apu apu = new Apu(ram);
-
-		/// set up controllers
-		/// load the cartridge
 	}
 
 	public void run() {
 		// start the console
 		while (true) {
-			step();
+			cpu.step();
 		}
 	}
 
@@ -31,9 +39,6 @@ public class Console {
 
 	public void reset() {
 		// reset the cpu
-	}
-
-	public void step() {
-		System.out.println("step");
+		cpu.reset();
 	}
 }
