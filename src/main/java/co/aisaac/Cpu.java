@@ -356,158 +356,262 @@ public class Cpu {
 
 	}
 
-
+	// reset to power up state
 	void reset() {
-		PC = (short) (ram.read((short) 0xFFFD) << 8 | ram.read((short) 0xFFFC));
-		SP = (byte) 0xFD;
-		// set PC
-		// set SP
-		// set flags
 	}
 
+	// print current cpu stat
+	void printInstruction(){
+
+	}
+
+	// are 2 addresses on the same page
+	boolean pagesDiffer(short a, short b){
+	}
+
+	// adds extra cpu cycle for branching, and another if pages differ
+	void addBranchCycles(){
+
+	}
+
+	// reads 2 bytes at address
+	short read16(short a){
+		return 0;
+	}
+
+	// 6502 bug that caused the low byte to wrap without inc high byte
+	short read16bug(short a){
+		return 0;
+	}
+
+	// push a byte onto stack
+	void push(byte b){
+
+	}
+
+	// pops a byte from the stack
+	byte pop(){
+		return 0;
+	}
+
+	// push 2 bytes on stack
+	void push16(short a){
+
+	}
+
+	// pop 2 bytes from stack
+	short pop16(){
+		return 0;
+	}
+
+	// returns flags of processor status register
+	byte flags(){
+		return 0;
+	}
+
+	// set the flags from a byte
+	void setFlags(byte b){
+
+	}
+
+	// set the zero flag
+	void setZ(byte b){
+
+	}
+
+	// set the negative flag
+	void setN(byte b){
+
+	}
+
+	// set zero and negative flag
+	void setZN(byte b){
+
+	}
+
+	// triggers the non maskable interrupt on next cpu interation
+	void triggerNMI(){
+
+	}
+
+	// triggers the IRQ interupt on next cpu iteration
+	void triggerIRQ(){
+
+	}
+
+	// NMI handler
+	void NMI(){
+
+	}
+
+	// IRQ handler
+	void IRQ(){}
 
 	// INSTRUCTIONS
 
-	// add with carry
+	// ADD with carry
 	void ADC() {
-		byte b = ram.read(address);
-		byte a = (byte) (A + b + C);
-		A = a;
-		// TODO
 	}
 
-	// logical and
+	// logical AND
 	void AND() {
-		A = (byte) (A & ram.read(address));
-		setZN(A);
 	}
 
-
+	// arithmetic shift left
 	void ASL() {
 	}
 
+	// branch if carry is clear
 	void BCC() {
 	}
 
+	// branch if carry is set
 	void BCS() {
 	}
 
+	// branch if equal
 	void BEQ() {
 	}
 
+	// bit test
 	void BIT() {
 	}
 
+	// branch if minus
 	void BMI() {
 	}
 
+	// branch if not equal
 	void BNE() {
 	}
 
+	// branch if positive
 	void BPL() {
 	}
 
+	// force interrupt
 	void BRK() {
 	}
 
+	// branch if overflow clear
 	void BVC() {
 	}
 
+	// branch if overflow set
 	void BVS() {
 	}
 
+	// clear carry flag
 	void CLC() {
-		// done
-		C = 0;
 	}
 
+	// clear decimal mode
 	void CLD() {
-		// done
-		D = 0;
 	}
 
+	// clear interrupt disable
 	void CLI() {
-		// done
-		I = 0;
 	}
 
+	// clear overflow flag
 	void CLV() {
-		// done
-		V = 0;
 	}
 
+	// compare
 	void CMP() {
 	}
 
+	// compare x register
 	void CPX() {
 	}
 
+	// compare y register
 	void CPY() {
 	}
 
+	// decrement memory
 	void DEC() {
 	}
 
+	// decrement x register
 	void DEX() {
 	}
 
+	// decrement y register
 	void DEY() {
 	}
 
+	// exclusive or
 	void EOR() {
 	}
 
+	// increment memory
 	void INC() {
 	}
 
+	// increment x register
 	void INX() {
 	}
 
+	// increment y register
 	void INY() {
 	}
 
+	// jump
 	void JMP() {
 	}
 
+	// jump to subroutine
 	void JSR() {
 	}
 
+	// load accumulator
 	void LDA() {
 	}
 
+	// load x register
 	void LDX() {
 	}
 
+	// load y register
 	void LDY() {
 	}
 
+	// logical shift right
 	void LSR() {
 	}
 
+	// no operation
 	void NOP() {
 	}
 
+	// logical includive or
 	void ORA() {
 	}
 
+	// push accumulator
 	void PHA() {
 	}
 
+	// push processor status
 	void PHP() {
 	}
 
+	// pull accumulator
 	void PLA() {
 	}
 
+	// pull processor status
 	void PLP() {
 	}
 
+	// rotate left
 	void ROL() {
 	}
 
+	// rotate right
 	void ROR() {
 	}
-
 
 	// return from interrupt
 	void RTI() {
@@ -517,52 +621,55 @@ public class Cpu {
 	void RTS() {
 	}
 
-
+	// subtract with carry
 	void SBC() {
-		// TODO
 	}
 
 	// set carry flag
 	void SEC() {
-		// done
-		C = 1;
 	}
 
+	// set decimal flag
 	void SED() {
-		// done
-		D = 1;
 	}
 
+	// set interupt disable
 	void SEI() {
-		// done
-		I = 1;
 	}
 
-
+	// store accumulator
 	void STA() {
 	}
 
+	// store x register
 	void STX() {
 	}
 
+	// store y register
 	void STY() {
 	}
 
+	// transfer accumulator to x
 	void TAX() {
 	}
 
+	// transfer accumulator to y
 	void TAY() {
 	}
 
+	// transfer stack pointer to x
 	void TSX() {
 	}
 
+	// transfer x to accumulator
 	void TXA() {
 	}
 
+	// transfer x to stack pointer
 	void TXS() {
 	}
 
+	// transfer y to stack pointer
 	void TYA() {
 	}
 
