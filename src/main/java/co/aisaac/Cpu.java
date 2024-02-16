@@ -2,6 +2,8 @@ package co.aisaac;
 
 public class Cpu {
 
+	double cycles;
+
 	// program counter
 	short PC = 0;
 	// stack pointer
@@ -308,9 +310,9 @@ public class Cpu {
 		// Step 3, decode opcode by looking at the current program counter
 		byte opcode = ram.read(PC);
 		Instruction inst = instructions[opcode];
-		mode = inst.instructionAddressingMode;
+		mode = inst.addressingMode;
 
-		PC += inst.instructionSize;
+		PC += inst.size;
 		/*
 		cycles += inst.instructionCycles;
 		if pageCrossed {
@@ -326,12 +328,12 @@ public class Cpu {
 	}
 
 	static class Instruction {
-		Instruction(String name, byte instructionPageCycles, byte instructionCycles, byte instructionSize, byte instructionAddressingMode, Inst inst) {
+		Instruction(String name, byte pageCycles, byte cycles, byte size, byte addressingMode, Inst inst) {
 			this.name = name;
-			this.instructionPageCycles = instructionPageCycles;
-			this.instructionCycles = instructionCycles;
-			this.instructionSize = instructionSize;
-			this.instructionAddressingMode = instructionAddressingMode;
+			this.pageCycles = pageCycles;
+			this.cycles = cycles;
+			this.size = size;
+			this.addressingMode = addressingMode;
 			this.inst = inst;
 		}
 
@@ -339,16 +341,16 @@ public class Cpu {
 		String name;
 
 		// the number of cycles this instruction takes when a page is crossed
-		byte instructionPageCycles;
+		byte pageCycles;
 
 		// the number of cycles this instruction takes
-		byte instructionCycles;
+		byte cycles;
 
 		// the size of the instruction in bytes
-		byte instructionSize;
+		byte size;
 
 		// the addressing mode for each instruction
-		byte instructionAddressingMode;
+		byte addressingMode;
 
 		// the function to execute
 		Inst inst;
@@ -361,91 +363,104 @@ public class Cpu {
 	}
 
 	// print current cpu stat
-	void printInstruction(){
+	void printInstruction() {
 
 	}
 
 	// are 2 addresses on the same page
-	boolean pagesDiffer(short a, short b){
+	// TODO what is a page?
+	boolean pagesDiffer(short a, short b) {
+		return (a & 0xFF00) != (b & 0xFF00);
 	}
 
 	// adds extra cpu cycle for branching, and another if pages differ
-	void addBranchCycles(){
+	void addBranchCycles() {
+		cycles++;
+		if (pagesDiffer(PC, address)) {
+			cycles++;
+		}
+	}
 
+	void compare(byte a, byte b) {
+		setZN((byte) (a - b));
+		C = (byte) (a >= b ? 1 : 0);
 	}
 
 	// reads 2 bytes at address
-	short read16(short a){
-		return 0;
+	short read16(short a) {
+		short low = ram.read(address);
+		short hi = ram.read((short) (address + 1));
+		return (short) ((hi << 8) | low);
 	}
 
 	// 6502 bug that caused the low byte to wrap without inc high byte
-	short read16bug(short a){
+	short read16bug(short a) {
 		return 0;
 	}
 
 	// push a byte onto stack
-	void push(byte b){
+	void push(byte b) {
 
 	}
 
 	// pops a byte from the stack
-	byte pop(){
+	byte pop() {
 		return 0;
 	}
 
 	// push 2 bytes on stack
-	void push16(short a){
+	void push16(short a) {
 
 	}
 
 	// pop 2 bytes from stack
-	short pop16(){
+	short pop16() {
 		return 0;
 	}
 
 	// returns flags of processor status register
-	byte flags(){
+	byte flags() {
 		return 0;
 	}
 
 	// set the flags from a byte
-	void setFlags(byte b){
+	void setFlags(byte b) {
 
 	}
 
 	// set the zero flag
-	void setZ(byte b){
+	void setZ(byte b) {
 
 	}
 
 	// set the negative flag
-	void setN(byte b){
+	void setN(byte b) {
 
 	}
 
 	// set zero and negative flag
-	void setZN(byte b){
+	void setZN(byte b) {
 
 	}
 
 	// triggers the non maskable interrupt on next cpu interation
-	void triggerNMI(){
+	void triggerNMI() {
 
 	}
 
 	// triggers the IRQ interupt on next cpu iteration
-	void triggerIRQ(){
+	void triggerIRQ() {
 
 	}
 
 	// NMI handler
-	void NMI(){
+	void NMI() {
 
 	}
 
 	// IRQ handler
-	void IRQ(){}
+	void IRQ() {
+	}
 
 	// INSTRUCTIONS
 
