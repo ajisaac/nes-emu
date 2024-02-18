@@ -393,14 +393,18 @@ public class Cpu {
 		return (short) ((hi << 8) | low);
 	}
 
-	// 6502 bug that caused the low byte to wrap without inc high byte
-	short read16bug(short a) {
-		return 0;
+	// 6502 bug that caused the low byte to wrap without incrementing high byte
+	short read16bug(short address) {
+		short low = ram.read(address);
+		short hi = ram.read((short) ((address & 0xFF00) | ((byte) address + 1)));
+		return (short) ((hi << 8) | low);
+
 	}
 
 	// push a byte onto stack
 	void push(byte b) {
-
+		ram.write((short) (0x100 | this.SP), b);
+		this.SP--;
 	}
 
 	// pops a byte from the stack
