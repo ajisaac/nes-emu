@@ -1,5 +1,5 @@
 # nintendo emulator
 
-A NES emulator based upon https://github.com/fogleman/nes 
+A NES emulator translated / forked from https://github.com/fogleman/nes 
 
 
