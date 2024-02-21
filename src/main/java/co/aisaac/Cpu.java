@@ -409,26 +409,40 @@ public class Cpu {
 
 	// pops a byte from the stack
 	byte pop() {
-		return 0;
+		this.SP++;
+		return ram.read((short) (0x100 | this.SP));
 	}
 
 	// push 2 bytes on stack
 	void push16(short a) {
-
+		push((byte) ((a >> 8) & 0xFF));
+		push((byte) (a & 0xFF));
 	}
 
 	// pop 2 bytes from stack
 	short pop16() {
-		return 0;
+		short low = pop();
+		short hi = pop();
+		return (short) ((hi << 8) | low);
 	}
 
 	// returns flags of processor status register
 	byte flags() {
-		return 0;
+		byte flags = 0;
+		flags |= C;
+		flags |= Z << 1;
+		flags |= I << 2;
+		flags |= D << 3;
+		flags |= B << 4;
+		flags |= U << 5;
+		flags |= V << 6;
+		flags |= N << 7;
+		return flags;
 	}
 
 	// set the flags from a byte
 	void setFlags(byte b) {
+
 
 	}
 
