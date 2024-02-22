@@ -37,11 +37,11 @@ public class INes {
 		// num of CHR-ROM in 8kb chunks, 0 means board uses CHR-RAM
 		byte numChr = header[5];
 
-		// header[6] = flags 6
-		// flags 7
-		// flags 8
-		// flags 9
-		// flags 10
+		byte flags6 = header[6];
+		byte flags7 = header[7];
+		byte flags8 = header[8];
+		byte flags9 = header[9];
+		byte flags10 = header[10];
 
 		// magic number for ines file format
 		int magicNumber;
