@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HexFormat;
 
 public class INes {
@@ -17,24 +18,6 @@ public class INes {
 	// the beginning of every ines file format
 	public static final int MAGIC = 0x1a53454e;
 
-	// magic number for ines file format
-	int magicNumber;
-
-	// number of PRG-ROM banks, 16kb each
-	byte numPRG;
-
-	// the number of CHR-ROM banks, 8kb each
-	byte numCHR;
-
-	// control bits
-	byte control1;
-
-	// control bits
-	byte control2;
-
-	// PRG-RAM size, x 8KB
-	byte numRam;
-
 	static Cartridge loadCartridge(String nesFile) throws IOException {
 
 		// open file
@@ -42,12 +25,36 @@ public class INes {
 		byte[] bytes = Files.readAllBytes(path);
 
 		// read file header
-		int i = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
-		String magicString = HexFormat.of().toHexDigits(i);
-		System.out.println("0x" + magicString);
-		System.out.println(i == MAGIC);
+		byte[] header = Arrays.copyOfRange(bytes, 0, 16);
 
-		// verify magic number
+		// verify magic number, first 4 bytes
+		int i = header[0] | header[1] << 8 | header[2] << 16 | header[3] << 24;
+		if (i != MAGIC) throw new IllegalStateException("Magic number unexpected: 0x" + HexFormat.of().toHexDigits(i));
+
+		// num of PRG-ROM in 16kb chunks
+		byte numPrg = header[4];
+
+		// num of CHR-ROM in 8kb chunks, 0 means board uses CHR-RAM
+		byte numChr = header[5];
+
+		// header[6] = flags 6
+		// flags 7
+		// flags 8
+		// flags 9
+		// flags 10
+
+		// magic number for ines file format
+		int magicNumber;
+
+
+		// control bits
+		byte control1;
+
+		// control bits
+		byte control2;
+
+		// PRG-RAM size, x 8KB
+		byte numRam;
 
 		// mapper type
 
