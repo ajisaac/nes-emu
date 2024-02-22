@@ -43,32 +43,9 @@ public class INes {
 		byte flags9 = header[9];
 		byte flags10 = header[10];
 
-		// magic number for ines file format
-		int magicNumber;
+		// configure everything given the flags above
 
-
-		// control bits
-		byte control1;
-
-		// control bits
-		byte control2;
-
-		// PRG-RAM size, x 8KB
-		byte numRam;
-
-		// mapper type
-
-		// mirroring type
-
-		// battery-backed ram
-
-		// read trainer if present
-
-		// read prg-rom banks
-
-		// read chr-rom banks
-
-		// provide chr-rom/ram
+		// read in all the bytes from the file
 
 		return new Cartridge(nesFile);
 	}
