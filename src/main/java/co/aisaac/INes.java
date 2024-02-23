@@ -1,14 +1,19 @@
 package co.aisaac;
 
-import java.io.ByteArrayInputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HexFormat;
 
+/*
+ Header (16 bytes)
+ Trainer, if present (0 or 512 bytes)
+ PRG ROM data (16384 * x bytes)
+ CHR ROM data, if present (8192 * y bytes)
+ PlayChoice INST-ROM, if present (0 or 8192 bytes)
+ PlayChoice PROM, if present (16 bytes Data, 16 bytes CounterOut) (this is often missing; see PC10 ROM-Images for details)
+ */
 public class INes {
 
 	public static void main(String[] args) throws IOException {
@@ -43,7 +48,17 @@ public class INes {
 		byte flags9 = header[9];
 		byte flags10 = header[10];
 
-		// configure everything given the flags above
+
+		// load trainer if present
+
+		// load PRG ROM
+
+		// LOAD CHR ROM
+
+		// PlayChoice INST-ROM if present
+
+		// PlayChoice PROM, if present
+
 
 		// read in all the bytes from the file
 
