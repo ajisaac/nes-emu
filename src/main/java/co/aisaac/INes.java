@@ -17,24 +17,30 @@ import java.util.HexFormat;
 public class INes {
 
 	public static void main(String[] args) throws IOException {
-		Cartridge cartridge = loadCartridge("/Users/aaron/Code/nes-emu/data/Nintendo/2-in-1 Super Mario Bros - Duck Hunt.nes");
+		INes ines = new INes();
+		Cartridge cartridge = ines.loadCartridge("/Users/aaron/Code/nes-emu/data/Nintendo/2-in-1 Super Mario Bros - Duck Hunt.nes");
 	}
 
-	// the beginning of every ines file format
+	/**
+	 * The beginning of every ines file format
+	 */
 	public static final int MAGIC = 0x1a53454e;
 
-	static Cartridge loadCartridge(String nesFile) throws IOException {
+	/**
+	 * The first 16 bytes
+	 */
+	byte[] header;
+
+	Cartridge loadCartridge(String nesFile) throws IOException {
 
 		// open file
 		Path path = Path.of(nesFile);
 		byte[] bytes = Files.readAllBytes(path);
 
 		// read file header
-		byte[] header = Arrays.copyOfRange(bytes, 0, 16);
+		this.header = Arrays.copyOfRange(bytes, 0, 16);
 
-		// verify magic number, first 4 bytes
-		int i = header[0] | header[1] << 8 | header[2] << 16 | header[3] << 24;
-		if (i != MAGIC) throw new IllegalStateException("Magic number unexpected: 0x" + HexFormat.of().toHexDigits(i));
+		verifyHeader();
 
 		// num of PRG-ROM in 16kb chunks
 		byte numPrg = header[4];
@@ -63,5 +69,25 @@ public class INes {
 		// read in all the bytes from the file
 
 		return new Cartridge(nesFile);
+	}
+
+
+	// verify magic number, first 4 bytes
+	private void verifyHeader() {
+		int i = header[0] | header[1] << 8 | header[2] << 16 | header[3] << 24;
+		if (i != MAGIC) throw new IllegalStateException("Magic number unexpected: 0x" + HexFormat.of().toHexDigits(i));
+	}
+
+	// 0 == vertical arrangement / "horizontal mirrored" (CIRAM a10 = PPU A11)
+	// 1 == horizontal arrangement / "veritcal mirrored" (CIRAM a10 = PPU A10)
+	private int nametableArrangement() {
+		return header[6] | 0b00000001;
+	}
+
+
+	// first 4 bits of 6 and 7
+	// 6's is low nibble, 7's is high nibble
+	private byte getMapper() {
+		return (byte) ((header[6] & 0b11110000) | ((header[7] & 0b11110000) >> 4));
 	}
 }
