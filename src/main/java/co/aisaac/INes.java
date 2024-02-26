@@ -84,6 +84,15 @@ public class INes {
 		return header[6] | 0b00000001;
 	}
 
+	private int hasBatteryPrgRam() {
+		return header[6] | 0b00000010;
+	}
+
+	private int hasTrainerData(){
+		return header[6] | 0b00000100;
+	}
+
+	private int hasAlternativeNametableLayout(){}
 
 	// first 4 bits of 6 and 7
 	// 6's is low nibble, 7's is high nibble
