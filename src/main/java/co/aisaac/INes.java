@@ -78,6 +78,8 @@ public class INes {
 		if (i != MAGIC) throw new IllegalStateException("Magic number unexpected: 0x" + HexFormat.of().toHexDigits(i));
 	}
 
+	// FLAGS 6
+
 	// 0 == vertical arrangement / "horizontal mirrored" (CIRAM a10 = PPU A11)
 	// 1 == horizontal arrangement / "veritcal mirrored" (CIRAM a10 = PPU A10)
 	private int nametableArrangement() {
@@ -88,15 +90,68 @@ public class INes {
 		return header[6] | 0b00000010;
 	}
 
-	private int hasTrainerData(){
+	private int hasTrainerData() {
 		return header[6] | 0b00000100;
 	}
 
-	private int hasAlternativeNametableLayout(){}
+	private int hasAlternativeNametableLayout() {
+		return header[6] | 0b00001000;
+	}
 
 	// first 4 bits of 6 and 7
 	// 6's is low nibble, 7's is high nibble
 	private byte getMapper() {
 		return (byte) ((header[6] & 0b11110000) | ((header[7] & 0b11110000) >> 4));
 	}
+
+	// FLAGS 7
+
+	private int hasVsUnisystem() {
+		return header[7] | 0b00000001;
+	}
+
+	private int hasPlayChoice10() {
+		return header[7] | 0b00000010;
+	}
+
+	// if equal to 2, then yes
+	private int hasNes2format() {
+		return header[7] | 0b00001100;
+	}
+
+	// FLAGS 8
+
+	private int prgRamSize() {
+		return header[8];
+	}
+
+	// 0:NTSC or 1:PAL
+	private int tvSystem() {
+		return header[9] | 0b00000001;
+	}
+
+	// reserved, set to 0
+	private int f9Reserved() {
+		int i = header[9] & 0b11111110;
+		if (i != 0) throw new IllegalStateException("f9 bits should be 0");
+		return i;
+	}
+
+	// FLAGS 10
+
+	// 0: NTSC, 2: PAL, 1/3: Dual Compatible
+	private int f10tvSystem() {
+		return header[10] | 0b00000011;
+	}
+
+	// 0: present, 1: not present
+	private int f10prgRam() {
+		return header[10] | 0b00010000;
+	}
+
+	// 0: no conflicts, 1: conflicts
+	private int f10busConflicts() {
+		return header[10] | 0b00100000;
+	}
+
 }
