@@ -1,5 +1,7 @@
 package co.aisaac;
 
+import java.io.IOException;
+
 public class Console {
 	Ram ram;
 	Cpu cpu;
@@ -11,8 +13,10 @@ public class Console {
 	Controller controller2;
 	Mapper mapper;
 
-	public Console(String rom) {
-		Cartridge cartridge = new Cartridge(rom);
+
+	public Console(String rom) throws IOException {
+		INes ines = new INes();
+		Cartridge cartridge = ines.loadCartridge(rom);
 
 		controller1 = new Controller();
 		controller2 = new Controller();
@@ -25,6 +29,7 @@ public class Console {
 		Apu apu = new Apu(ram);
 	}
 
+
 	public void run() {
 		// start the console
 		while (true) {
@@ -32,10 +37,6 @@ public class Console {
 		}
 	}
 
-	public void loadCartridge(String rom) {
-		/// the .nes format should return a cartridge
-		/// this format is documented
-	}
 
 	public void reset() {
 		// reset the cpu
