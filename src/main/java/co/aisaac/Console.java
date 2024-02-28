@@ -14,9 +14,9 @@ public class Console {
 	Mapper mapper;
 
 
-	public Console(String rom) throws IOException {
-		INes ines = new INes();
-		Cartridge cartridge = ines.loadCartridge(rom);
+	public Console(Cartridge cartridge) {
+
+		this.cartridge = cartridge;
 
 		controller1 = new Controller();
 		controller2 = new Controller();
@@ -37,9 +37,13 @@ public class Console {
 		}
 	}
 
+	public void step(long diff) {
+
+	}
 
 	public void reset() {
 		// reset the cpu
 		cpu.reset();
 	}
+
 }
