@@ -300,7 +300,7 @@ public class Cpu {
 
 	}
 
-	void step() {
+	int step() {
 		// Step 1, we may be waiting some cycles for some reason
 		// cpu stalled
 
@@ -321,6 +321,7 @@ public class Cpu {
 		*/
 
 		instructions[opcode].inst.execute();
+		return 0;
 	}
 
 	interface Inst {

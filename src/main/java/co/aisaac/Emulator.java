@@ -51,6 +51,7 @@ public class Emulator {
 		long time = System.nanoTime();
 		long diff = time - this.timestamp;
 		this.timestamp = time;
+		System.out.println(diff);
 
 		// handle controller input or something
 

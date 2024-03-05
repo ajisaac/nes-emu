@@ -4,4 +4,8 @@ public class Mapper {
 	public Mapper(Ram ram) {
 
 	}
+
+	public void step() {
+
+	}
 }
