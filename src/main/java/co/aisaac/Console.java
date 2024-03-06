@@ -19,15 +19,15 @@ public class Console {
 
 		this.cartridge = cartridge;
 
-		controller1 = new Controller();
-		controller2 = new Controller();
+		this.controller1 = new Controller();
+		this.controller2 = new Controller();
 
 		// ram starts out blank
-		Ram ram = new Ram();
-		Mapper mapper = new Mapper(ram);
-		Cpu cpu = new Cpu(ram);
-		Ppu ppu = new Ppu(ram);
-		Apu apu = new Apu(ram);
+		this.ram = new Ram();
+		this.mapper = new Mapper(ram);
+		this.cpu = new Cpu(ram);
+		this.ppu = new Ppu(ram);
+		this.apu = new Apu(ram);
 	}
 
 
