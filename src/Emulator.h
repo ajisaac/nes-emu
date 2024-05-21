@@ -1,17 +1,3 @@
-#include "Console.h"
-#include <bitset>
-#include <cstddef>
-#include <iostream>
-
-std::ostream &operator<<(std::ostream &os, std::byte b) {
-    return os << std::bitset<8>(std::to_integer<int>(b));
-}
-
-int main() {
-    Console console{};
-    console.run();
-    return 0;
-}
 //
 // Created by Aaron Isaac on 5/20/24.
 //

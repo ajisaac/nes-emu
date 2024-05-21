@@ -1,15 +1,3 @@
-#include "Console.h"
-
-Console::Console() = default;
-
-void Console::run() {
-    // load rom
-    // start running
-    while (true)
-        cpu.step();
-}
-
-Console::~Console() = default;
 //
 // Created by Aaron Isaac on 5/20/24.
 //
