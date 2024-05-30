@@ -1,5 +1,5 @@
+//
+// Created by Aaron Isaac on 5/20/24.
+//
+
 #include "Graphics.h"
-
-void Graphics::draw(Console console) {
-
-}
