@@ -1,45 +1,38 @@
-//
-// Created by Aaron Isaac on 5/20/24.
-//
+// Cartridge loaded from a .nes file
+// http://wiki.nesdev.com/w/index.php/INES
+// http://nesdev.com/NESDoc.pdf (page 28)
 
 #ifndef NES_EMU_CARTRIDGE_H
 #define NES_EMU_CARTRIDGE_H
 
+#include <string>
+#include "INes.h"
 
 class Cartridge {
+    // check if file exists
+    // check if headers are proper
+    // start loading the cartridge
+    // throw ise if fails
 
-};
-
-
-#endif //NES_EMU_CARTRIDGE_H
-package co.aisaac;
-
-// Cartridge loaded from a .nes file
-// http://wiki.nesdev.com/w/index.php/INES
-// http://nesdev.com/NESDoc.pdf (page 28)
-public class Cartridge {
+    public:
+    explicit Cartridge(std::string rom);
 
     // PRG-ROM
-    byte[] prg;
+    char prg[1]{};
 
     // CHR-ROM
-    byte[] chr;
+    char chr[1]{};
 
     // mapper type for this game
-    byte mapper;
+    char mapper{};
 
     // mirroring mode?
-    byte mirror;
+    char mirror{};
 
     // does battery exist?
-    byte battery;
+    char battery{};
 
-public Cartridge(String rom) {
-        // check if file exists
-        // check if headers are proper
-        // start loading the cartridge
-        // throw ise if fails
+    void loadRom(INes nes);
+};
 
-
-    }
-}
+#endif //NES_EMU_CARTRIDGE_H

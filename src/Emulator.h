@@ -1,77 +1,42 @@
-//
-// Created by Aaron Isaac on 5/20/24.
-//
-
 #ifndef NES_EMU_EMULATOR_H
 #define NES_EMU_EMULATOR_H
 
+#include "INes.h"
+#include "Console.h"
+#include "Graphics.h"
+#include "Audio.h"
+#include "Cartridge.h"
+#include "Controller.h"
+#include <SDL.h>
+#include <iostream>
+#include <string>
 
+// manager class for the console
+// It doesn't know what happens in the console, it can only observe it
+// This will manage the game loop, rendering, etc
 class Emulator {
+public:
 
+    long timestamp = get_time();
+    Console console;
+    Graphics graphics;
+//    Controller controller1;
+//    Controller controller2;
+
+//    Audio audio;
+
+    SDL_Window *window;
+    SDL_Renderer *renderer;
+
+    explicit Emulator(std::string rom);
+
+    void run();
+
+    bool step();
+
+private:
+    static long get_time();
 };
 
 
 #endif //NES_EMU_EMULATOR_H
-package co.aisaac;
-
-import java.io.IOException;
-
-/**
- * The main class, represents the actual emulator program
- */
-public class Emulator {
-
-public static void main(String[] args) throws IOException {
-            String rom = "/Users/aaron/Code/nes-emu/data/Nintendo/1942.nes";
-            Emulator emulator = new Emulator(rom);
-            emulator.run();
-    }
-
-    long timestamp = System.nanoTime();
-
-    Console console;
-    Graphics graphics;
-    Cartridge cartridge;
-    Controller controller1;
-    Controller controller2;
-    Audio audio;
-
-public Emulator(String rom) throws IOException {
-
-            this.cartridge = new INes().loadCartridge(rom);
-            this.console = new Console(this.cartridge);
-            this.graphics = new Graphics();
-            this.audio = new Audio();
-            this.graphics.createWindow();
-
-    }
-
-public void run() {
-        // initialize everything, resources, opengl, etc
-        // should have a game here we want to play
-
-        // loop continuously
-        // run update on view
-
-        boolean running = true;
-        while (running) {
-            running = step();
-        }
-    }
-
-private boolean step() {
-
-        // todo improve game loop
-        long time = System.nanoTime();
-        long diff = time - this.timestamp;
-        this.timestamp = time;
-        System.out.println(diff);
-
-        // handle controller input or something
-
-        console.step(diff);
-        graphics.draw(console);
-
-        return true;
-    }
-}
