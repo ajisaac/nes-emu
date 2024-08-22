@@ -1,9 +1,5 @@
+//
+// Created by Aaron Isaac on 5/20/24.
+//
+
 #include "Cartridge.h"
-
-void Cartridge::loadRom(INes nes) {
-
-}
-
-Cartridge::Cartridge(std::string rom) {
-
-}
