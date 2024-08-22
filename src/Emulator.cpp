@@ -1,82 +1,76 @@
-//
-// Created by Aaron Isaac on 5/20/24.
-//
 
 #include "Emulator.h"
-//
-// Created by Aaron Isaac on 5/20/24.
-//
 
-#ifndef NES_EMU_EMULATOR_H
-#define NES_EMU_EMULATOR_H
+#include <utility>
 
 
-class Emulator {
+Emulator::Emulator(std::string rom) {
 
-};
+    Cartridge cartridge = Cartridge{std::move(rom)};
+    console = Console{cartridge};
+//    controller1 = Controller{};
+//    controller2 = Controller{};
 
+//    graphics = Graphics();
+//    audio = Audio();
+//    graphics.createWindow();
 
-#endif //NES_EMU_EMULATOR_H
-package co.aisaac;
+}
 
-import java.io.IOException;
+bool Emulator::step() {
 
-/**
- * The main class, represents the actual emulator program
- */
-public class Emulator {
+    // todo improve game loop
+    long time = get_time();
+    long diff = time - this->timestamp;
+    this->timestamp = time;
+    std::cout << diff << "\n";
 
-public static void main(String[] args) throws IOException {
-            String rom = "/Users/aaron/Code/nes-emu/data/Nintendo/1942.nes";
-            Emulator emulator = new Emulator(rom);
-            emulator.run();
+//         handle controller input or something
+
+    console.step(diff);
+    graphics.draw(console);
+
+    return true;
+}
+
+void Emulator::run() {
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't initialize SDL: %s", SDL_GetError());
+        return;
     }
 
-    long timestamp = System.nanoTime();
-
-    Console console;
-    Graphics graphics;
-    Cartridge cartridge;
-    Controller controller1;
-    Controller controller2;
-    Audio audio;
-
-public Emulator(String rom) throws IOException {
-
-            this.cartridge = new INes().loadCartridge(rom);
-            this.console = new Console(this.cartridge);
-            this.graphics = new Graphics();
-            this.audio = new Audio();
-            this.graphics.createWindow();
-
+    if (SDL_CreateWindowAndRenderer(800, 800, SDL_WINDOW_RESIZABLE, &window, &renderer)) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create window and renderer: %s", SDL_GetError());
+        return;
     }
 
-public void run() {
-        // initialize everything, resources, opengl, etc
-        // should have a game here we want to play
-
-        // loop continuously
-        // run update on view
-
-        boolean running = true;
-        while (running) {
-            running = step();
+    SDL_Event event;
+    bool running = true;
+    while (running) {
+        running = step();
+        SDL_PollEvent(&event);
+        if (event.type == SDL_QUIT) {
+            running = false;
         }
+        if (event.type == SDL_KEYDOWN) {
+            if (event.key.keysym.sym == SDLK_j) {}
+            if (event.key.keysym.sym == SDLK_k) {}
+            if (event.key.keysym.sym == SDLK_l) {}
+            if (event.key.keysym.sym == SDLK_i) {}
+        }
+
+        SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
+        SDL_RenderClear(renderer);
+
+        SDL_RenderPresent(renderer);
     }
 
-private boolean step() {
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
 
-        // todo improve game loop
-        long time = System.nanoTime();
-        long diff = time - this.timestamp;
-        this.timestamp = time;
-        System.out.println(diff);
+    SDL_Quit();
+}
 
-        // handle controller input or something
-
-        console.step(diff);
-        graphics.draw(console);
-
-        return true;
-    }
+long Emulator::get_time() {
+    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }

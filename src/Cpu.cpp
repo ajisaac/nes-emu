@@ -1,0 +1,971 @@
+//
+// Created by Aaron Isaac on 5/20/24.
+//
+#include "Cpu.h"
+
+Cpu::Cpu(Ram *ram) {
+    this->ram = ram;
+    createTable();
+    reset();
+
+}
+Cpu::instruction Cpu::decode() {
+    Cpu::instruction result{};
+    return result;
+}
+
+void Cpu::execute(Cpu::instruction instruction1) {
+
+}
+
+int Cpu::step() {
+    // Step 1, we may be waiting some cycles for some reason
+    // cpu stalled
+
+    // Step 2, we should handle interupts
+    // something may have set an interupt, we should handle
+
+    // Step 3, decode opcode by looking at the current program counter
+    unsigned char opcode = ram->read(PC);
+    Instruction inst = instructions[opcode];
+    mode = inst.addressingMode;
+
+    PC += inst.size;
+    /*
+    cycles += inst.instructionCycles;
+    if pageCrossed {
+        cycles += inst.instructionPageCycles;
+    }
+    */
+
+
+    execute_instruction(opcode);
+    instructions[opcode].inst.execute();
+    return 0;
+}
+
+void Cpu::reset() {
+}
+
+void Cpu::printInstruction() {
+
+}
+
+bool Cpu::pagesDiffer(short a, short b) {
+    return (a & 0xFF00) != (b & 0xFF00);
+}
+
+void Cpu::addBranchCycles() {
+    cycles++;
+    if (pagesDiffer(PC, address)) {
+        cycles++;
+    }
+}
+
+void Cpu::compare(unsigned char a, unsigned char b) {
+    setZN(a - b);
+    C = a >= b ? 1 : 0;
+}
+
+short Cpu::read16(short a) {
+    short low = ram->read(address);
+    short hi = ram->read((short) (address + 1));
+    return (short) ((hi << 8) | low);
+}
+
+short Cpu::read16bug(short address) {
+    short low = ram->read(address);
+    short hi = ram->read((short) ((address & 0xFF00) | ((unsigned char) address + 1)));
+    return (short) ((hi << 8) | low);
+
+}
+
+void Cpu::push(unsigned char b) {
+    ram->write((short) (0x100 | this->SP), b);
+    this->SP--;
+}
+
+void Cpu::execute_instruction(unsigned char opcode) {
+
+}
+
+unsigned char Cpu::pop() {
+    this->SP++;
+    return ram->read((short) (0x100 | this->SP));
+}
+
+void Cpu::push16(short a) {
+    push((a >> 8) & 0xFF);
+    push(a & 0xFF);
+}
+
+// pop 2 bytes from stack
+short Cpu::pop16() {
+    short low = pop();
+    short hi = pop();
+    return (short) ((hi << 8) | low);
+}
+
+// returns flags of processor status register
+unsigned char Cpu::flags() {
+    unsigned char flags = 0;
+    flags |= C;
+    flags |= Z << 1;
+    flags |= I << 2;
+    flags |= D << 3;
+    flags |= B << 4;
+    flags |= U << 5;
+    flags |= V << 6;
+    flags |= N << 7;
+    return flags;
+}
+
+// set the flags from a byte
+void Cpu::setFlags(unsigned char b) {
+
+
+}
+
+// set the zero flag
+void Cpu::setZ(unsigned char b) {
+
+}
+
+// set the negative flag
+void Cpu::setN(unsigned char b) {
+
+}
+
+// set zero and negative flag
+void Cpu::setZN(unsigned char b) {
+
+}
+
+// triggers the non maskable interrupt on next cpu interation
+void Cpu::triggerNMI() {
+
+}
+
+// triggers the IRQ interupt on next cpu iteration
+void Cpu::triggerIRQ() {
+
+}
+
+// NMI handler
+void Cpu::NMI() {
+
+}
+
+// IRQ handler
+void Cpu::IRQ() {
+}
+
+// INSTRUCTIONS
+
+// ADD with carry
+void Cpu::ADC() {
+}
+
+// logical AND
+void Cpu::AND() {
+}
+
+// arithmetic shift left
+void Cpu::ASL() {
+}
+
+// branch if carry is clear
+void Cpu::BCC() {
+}
+
+// branch if carry is set
+void Cpu::BCS() {
+}
+
+// branch if equal
+void Cpu::BEQ() {
+}
+
+// bit test
+void Cpu::BIT() {
+}
+
+// branch if minus
+void Cpu::BMI() {
+}
+
+// branch if not equal
+void Cpu::BNE() {
+}
+
+// branch if positive
+void Cpu::BPL() {
+}
+
+// force interrupt
+void Cpu::BRK() {
+}
+
+// branch if overflow clear
+void Cpu::BVC() {
+}
+
+// branch if overflow set
+void Cpu::BVS() {
+}
+
+// clear carry flag
+void Cpu::CLC() {
+}
+
+// clear decimal mode
+void Cpu::CLD() {
+}
+
+// clear interrupt disable
+void Cpu::CLI() {
+}
+
+// clear overflow flag
+void Cpu::CLV() {
+}
+
+// compare
+void Cpu::CMP() {
+}
+
+// compare x register
+void Cpu::CPX() {
+}
+
+// compare y register
+void Cpu::CPY() {
+}
+
+// decrement memory
+void Cpu::DEC() {
+}
+
+// decrement x register
+void Cpu::DEX() {
+}
+
+// decrement y register
+void Cpu::DEY() {
+}
+
+// exclusive or
+void Cpu::EOR() {
+}
+
+// increment memory
+void Cpu::INC() {
+}
+
+// increment x register
+void Cpu::INX() {
+}
+
+// increment y register
+void Cpu::INY() {
+}
+
+// jump
+void Cpu::JMP() {
+}
+
+// jump to subroutine
+void Cpu::JSR() {
+}
+
+// load accumulator
+void Cpu::LDA() {
+}
+
+// load x register
+void Cpu::LDX() {
+}
+
+// load y register
+void Cpu::LDY() {
+}
+
+// logical shift right
+void Cpu::LSR() {
+}
+
+// no operation
+void Cpu::NOP() {
+}
+
+// logical includive or
+void Cpu::ORA() {
+}
+
+// push accumulator
+void Cpu::PHA() {
+}
+
+// push processor status
+void Cpu::PHP() {
+}
+
+// pull accumulator
+void Cpu::PLA() {
+}
+
+// pull processor status
+void Cpu::PLP() {
+}
+
+// rotate left
+void Cpu::ROL() {
+}
+
+// rotate right
+void Cpu::ROR() {
+}
+
+// return from interrupt
+void Cpu::RTI() {
+}
+
+// return from subroutine
+void Cpu::RTS() {
+}
+
+// subtract with carry
+void Cpu::SBC() {
+}
+
+// set carry flag
+void Cpu::SEC() {
+}
+
+// set decimal flag
+void Cpu::SED() {
+}
+
+// set interupt disable
+void Cpu::SEI() {
+}
+
+// store accumulator
+void Cpu::STA() {
+}
+
+// store x register
+void Cpu::STX() {
+}
+
+// store y register
+void Cpu::STY() {
+}
+
+// transfer accumulator to x
+void Cpu::TAX() {
+}
+
+// transfer accumulator to y
+void Cpu::TAY() {
+}
+
+// transfer stack pointer to x
+void Cpu::TSX() {
+}
+
+// transfer x to accumulator
+void Cpu::TXA() {
+}
+
+// transfer x to stack pointer
+void Cpu::TXS() {
+}
+
+// transfer y to stack pointer
+void Cpu::TYA() {
+}
+
+void Cpu::ARR() {
+    // noop
+}
+
+void Cpu::AHX() {
+    // noop
+}
+
+void Cpu::ALR() {
+    // noop
+}
+
+void Cpu::ANC() {
+    // noop
+}
+
+void Cpu::AXS() {
+    // noop
+}
+
+void Cpu::DCP() {
+    // noop
+}
+
+void Cpu::ISC() {
+    // noop
+}
+
+void Cpu::KIL() {
+    // noop
+}
+
+void Cpu::LAS() {
+    // noop
+}
+
+void Cpu::LAX() {
+    // noop
+}
+
+void Cpu::RLA() {
+    // noop
+}
+
+void Cpu::RRA() {
+    // noop
+}
+
+void Cpu::SAX() {
+    // noop
+}
+
+void Cpu::TAS() {
+    // noop
+}
+
+void Cpu::SHX() {
+    // noop
+}
+
+void Cpu::SHY() {
+    // noop
+}
+
+void Cpu::SLO() {
+    // noop
+}
+
+void Cpu::SRE() {
+    // noop
+}
+
+void Cpu::XAA() {
+    // noop
+}
+
+void Cpu::createTable() {
+    instructions[0] = new Instruction("BRK", 0, 7, 2, 6, this ::BRK);
+    instructions[1] = new Instruction("ORA", 0, 6, 2, 7, this ::ORA);
+    instructions[2] = new Instruction("KIL", 0, 2, 0, 6, this ::KIL);
+    instructions[3] = new Instruction("SLO", 0, 8, 0, 7, this ::SLO);
+    instructions[4] = new Instruction("NOP", 0, 3, 2, 11, this ::NOP);
+    instructions[5] = new Instruction("ORA", 0, 3, 2, 11, this ::ORA);
+    instructions[6] = new Instruction("ASL", 0, 5, 2, 11, this ::ASL);
+    instructions[7] = new Instruction("SLO", 0, 5, 0, 11, this ::SLO);
+    instructions[8] = new Instruction("PHP", 0, 3, 1, 6, this
+    ::PHP);
+    instructions[9] = new Instruction("ORA", 0, 2, 2, 5, this
+    ::ORA);
+    instructions[10] = new Instruction("ASL", 0, 2, 1, 4, this
+    ::ASL);
+    instructions[11] = new Instruction("ANC", 0, 2, 0, 5, this
+    ::ANC);
+    instructions[12] = new Instruction("NOP", 0, 4, 3, 1, this
+    ::NOP);
+    instructions[13] = new Instruction("ORA", 0, 4, 3, 1, this
+    ::ORA);
+    instructions[14] = new Instruction("ASL", 0, 6, 3, 1, this
+    ::ASL);
+    instructions[15] = new Instruction("SLO", 0, 6, 0, 1, this
+    ::SLO);
+    instructions[16] = new Instruction("BPL", 1, 2, 2, 10, this
+    ::BPL);
+    instructions[17] = new Instruction("ORA", 1, 5, 2, 9, this
+    ::ORA);
+    instructions[18] = new Instruction("KIL", 0, 2, 0, 6, this
+    ::KIL);
+    instructions[19] = new Instruction("SLO", 0, 8, 0, 9, this
+    ::SLO);
+    instructions[20] = new Instruction("NOP", 0, 4, 2, 12, this
+    ::NOP);
+    instructions[21] = new Instruction("ORA", 0, 4, 2, 12, this
+    ::ORA);
+    instructions[22] = new Instruction("ASL", 0, 6, 2, 12, this
+    ::ASL);
+    instructions[23] = new Instruction("SLO", 0, 6, 0, 12, this
+    ::SLO);
+    instructions[24] = new Instruction("CLC", 0, 2, 1, 6, this
+    ::CLC);
+    instructions[25] = new Instruction("ORA", 1, 4, 3, 3, this
+    ::ORA);
+    instructions[26] = new Instruction("NOP", 0, 2, 1, 6, this
+    ::NOP);
+    instructions[27] = new Instruction("SLO", 0, 7, 0, 3, this
+    ::SLO);
+    instructions[28] = new Instruction("NOP", 1, 4, 3, 2, this
+    ::NOP);
+    instructions[29] = new Instruction("ORA", 1, 4, 3, 2, this
+    ::ORA);
+    instructions[30] = new Instruction("ASL", 0, 7, 3, 2, this
+    ::ASL);
+    instructions[31] = new Instruction("SLO", 0, 7, 0, 2, this
+    ::SLO);
+    instructions[32] = new Instruction("JSR", 0, 6, 3, 1, this
+    ::JSR);
+    instructions[33] = new Instruction("AND", 0, 6, 2, 7, this
+    ::AND);
+    instructions[34] = new Instruction("KIL", 0, 2, 0, 6, this
+    ::KIL);
+    instructions[35] = new Instruction("RLA", 0, 8, 0, 7, this
+    ::RLA);
+    instructions[36] = new Instruction("BIT", 0, 3, 2, 11, this
+    ::BIT);
+    instructions[37] = new Instruction("AND", 0, 3, 2, 11, this
+    ::AND);
+    instructions[38] = new Instruction("ROL", 0, 5, 2, 11, this
+    ::ROL);
+    instructions[39] = new Instruction("RLA", 0, 5, 0, 11, this
+    ::RLA);
+    instructions[40] = new Instruction("PLP", 0, 4, 1, 6, this
+    ::PLP);
+    instructions[41] = new Instruction("AND", 0, 2, 2, 5, this
+    ::AND);
+    instructions[42] = new Instruction("ROL", 0, 2, 1, 4, this
+    ::ROL);
+    instructions[43] = new Instruction("ANC", 0, 2, 0, 5, this
+    ::ANC);
+    instructions[44] = new Instruction("BIT", 0, 4, 3, 1, this
+    ::BIT);
+    instructions[45] = new Instruction("AND", 0, 4, 3, 1, this
+    ::AND);
+    instructions[46] = new Instruction("ROL", 0, 6, 3, 1, this
+    ::ROL);
+    instructions[47] = new Instruction("RLA", 0, 6, 0, 1, this
+    ::RLA);
+    instructions[48] = new Instruction("BMI", 1, 2, 2, 10, this
+    ::BMI);
+    instructions[49] = new Instruction("AND", 1, 5, 2, 9, this
+    ::AND);
+    instructions[50] = new Instruction("KIL", 0, 2, 0, 6, this
+    ::KIL);
+    instructions[51] = new Instruction("RLA", 0, 8, 0, 9, this
+    ::RLA);
+    instructions[52] = new Instruction("NOP", 0, 4, 2, 12, this
+    ::NOP);
+    instructions[53] = new Instruction("AND", 0, 4, 2, 12, this
+    ::AND);
+    instructions[54] = new Instruction("ROL", 0, 6, 2, 12, this
+    ::ROL);
+    instructions[55] = new Instruction("RLA", 0, 6, 0, 12, this
+    ::RLA);
+    instructions[56] = new Instruction("SEC", 0, 2, 1, 6, this
+    ::SEC);
+    instructions[57] = new Instruction("AND", 1, 4, 3, 3, this
+    ::AND);
+    instructions[58] = new Instruction("NOP", 0, 2, 1, 6, this
+    ::NOP);
+    instructions[59] = new Instruction("RLA", 0, 7, 0, 3, this
+    ::RLA);
+    instructions[60] = new Instruction("NOP", 1, 4, 3, 2, this
+    ::NOP);
+    instructions[61] = new Instruction("AND", 1, 4, 3, 2, this
+    ::AND);
+    instructions[62] = new Instruction("ROL", 0, 7, 3, 2, this
+    ::ROL);
+    instructions[63] = new Instruction("RLA", 0, 7, 0, 2, this
+    ::RLA);
+    instructions[64] = new Instruction("RTI", 0, 6, 1, 6, this
+    ::RTI);
+    instructions[65] = new Instruction("EOR", 0, 6, 2, 7, this
+    ::EOR);
+    instructions[66] = new Instruction("KIL", 0, 2, 0, 6, this
+    ::KIL);
+    instructions[67] = new Instruction("SRE", 0, 8, 0, 7, this
+    ::SRE);
+    instructions[68] = new Instruction("NOP", 0, 3, 2, 11, this
+    ::NOP);
+    instructions[69] = new Instruction("EOR", 0, 3, 2, 11, this
+    ::EOR);
+    instructions[70] = new Instruction("LSR", 0, 5, 2, 11, this
+    ::LSR);
+    instructions[71] = new Instruction("SRE", 0, 5, 0, 11, this
+    ::SRE);
+    instructions[72] = new Instruction("PHA", 0, 3, 1, 6, this
+    ::PHA);
+    instructions[73] = new Instruction("EOR", 0, 2, 2, 5, this
+    ::EOR);
+    instructions[74] = new Instruction("LSR", 0, 2, 1, 4, this
+    ::LSR);
+    instructions[75] = new Instruction("ALR", 0, 2, 0, 5, this
+    ::ALR);
+    instructions[76] = new Instruction("JMP", 0, 3, 3, 1, this
+    ::JMP);
+    instructions[77] = new Instruction("EOR", 0, 4, 3, 1, this
+    ::EOR);
+    instructions[78] = new Instruction("LSR", 0, 6, 3, 1, this
+    ::LSR);
+    instructions[79] = new Instruction("SRE", 0, 6, 0, 1, this
+    ::SRE);
+    instructions[80] = new Instruction("BVC", 1, 2, 2, 10, this
+    ::BVC);
+    instructions[81] = new Instruction("EOR", 1, 5, 2, 9, this
+    ::EOR);
+    instructions[82] = new Instruction("KIL", 0, 2, 0, 6, this
+    ::KIL);
+    instructions[83] = new Instruction("SRE", 0, 8, 0, 9, this
+    ::SRE);
+    instructions[84] = new Instruction("NOP", 0, 4, 2, 12, this
+    ::NOP);
+    instructions[85] = new Instruction("EOR", 0, 4, 2, 12, this
+    ::EOR);
+    instructions[86] = new Instruction("LSR", 0, 6, 2, 12, this
+    ::LSR);
+    instructions[87] = new Instruction("SRE", 0, 6, 0, 12, this
+    ::SRE);
+    instructions[88] = new Instruction("CLI", 0, 2, 1, 6, this
+    ::CLI);
+    instructions[89] = new Instruction("EOR", 1, 4, 3, 3, this
+    ::EOR);
+    instructions[90] = new Instruction("NOP", 0, 2, 1, 6, this
+    ::NOP);
+    instructions[91] = new Instruction("SRE", 0, 7, 0, 3, this
+    ::SRE);
+    instructions[92] = new Instruction("NOP", 1, 4, 3, 2, this
+    ::NOP);
+    instructions[93] = new Instruction("EOR", 1, 4, 3, 2, this
+    ::EOR);
+    instructions[94] = new Instruction("LSR", 0, 7, 3, 2, this
+    ::LSR);
+    instructions[95] = new Instruction("SRE", 0, 7, 0, 2, this
+    ::SRE);
+    instructions[96] = new Instruction("RTS", 0, 6, 1, 6, this
+    ::RTS);
+    instructions[97] = new Instruction("ADC", 0, 6, 2, 7, this
+    ::ADC);
+    instructions[98] = new Instruction("KIL", 0, 2, 0, 6, this
+    ::KIL);
+    instructions[99] = new Instruction("RRA", 0, 8, 0, 7, this
+    ::RRA);
+    instructions[100] = new Instruction("NOP", 0, 3, 2, 11, this
+    ::NOP);
+    instructions[101] = new Instruction("ADC", 0, 3, 2, 11, this
+    ::ADC);
+    instructions[102] = new Instruction("ROR", 0, 5, 2, 11, this
+    ::ROR);
+    instructions[103] = new Instruction("RRA", 0, 5, 0, 11, this
+    ::RRA);
+    instructions[104] = new Instruction("PLA", 0, 4, 1, 6, this
+    ::PLA);
+    instructions[105] = new Instruction("ADC", 0, 2, 2, 5, this
+    ::ADC);
+    instructions[106] = new Instruction("ROR", 0, 2, 1, 4, this
+    ::ROR);
+    instructions[107] = new Instruction("ARR", 0, 2, 0, 5, this
+    ::ARR);
+    instructions[108] = new Instruction("JMP", 0, 5, 3, 8, this
+    ::JMP);
+    instructions[109] = new Instruction("ADC", 0, 4, 3, 1, this
+    ::ADC);
+    instructions[110] = new Instruction("ROR", 0, 6, 3, 1, this
+    ::ROR);
+    instructions[111] = new Instruction("RRA", 0, 6, 0, 1, this
+    ::RRA);
+    instructions[112] = new Instruction("BVS", 1, 2, 2, 10, this
+    ::BVS);
+    instructions[113] = new Instruction("ADC", 1, 5, 2, 9, this
+    ::ADC);
+    instructions[114] = new Instruction("KIL", 0, 2, 0, 6, this
+    ::KIL);
+    instructions[115] = new Instruction("RRA", 0, 8, 0, 9, this
+    ::RRA);
+    instructions[116] = new Instruction("NOP", 0, 4, 2, 12, this
+    ::NOP);
+    instructions[117] = new Instruction("ADC", 0, 4, 2, 12, this
+    ::ADC);
+    instructions[118] = new Instruction("ROR", 0, 6, 2, 12, this
+    ::ROR);
+    instructions[119] = new Instruction("RRA", 0, 6, 0, 12, this
+    ::RRA);
+    instructions[120] = new Instruction("SEI", 0, 2, 1, 6, this
+    ::SEI);
+    instructions[121] = new Instruction("ADC", 1, 4, 3, 3, this
+    ::ADC);
+    instructions[122] = new Instruction("NOP", 0, 2, 1, 6, this
+    ::NOP);
+    instructions[123] = new Instruction("RRA", 0, 7, 0, 3, this
+    ::RRA);
+    instructions[124] = new Instruction("NOP", 1, 4, 3, 2, this
+    ::NOP);
+    instructions[125] = new Instruction("ADC", 1, 4, 3, 2, this
+    ::ADC);
+    instructions[126] = new Instruction("ROR", 0, 7, 3, 2, this
+    ::ROR);
+    instructions[127] = new Instruction("RRA", 0, 7, 0, 2, this
+    ::RRA);
+    instructions[128] = new Instruction("NOP", 0, 2, 2, 5, this
+    ::NOP);
+    instructions[129] = new Instruction("STA", 0, 6, 2, 7, this
+    ::STA);
+    instructions[130] = new Instruction("NOP", 0, 2, 0, 5, this
+    ::NOP);
+    instructions[131] = new Instruction("SAX", 0, 6, 0, 7, this
+    ::SAX);
+    instructions[132] = new Instruction("STY", 0, 3, 2, 11, this
+    ::STY);
+    instructions[133] = new Instruction("STA", 0, 3, 2, 11, this
+    ::STA);
+    instructions[134] = new Instruction("STX", 0, 3, 2, 11, this
+    ::STX);
+    instructions[135] = new Instruction("SAX", 0, 3, 0, 11, this
+    ::SAX);
+    instructions[136] = new Instruction("DEY", 0, 2, 1, 6, this
+    ::DEY);
+    instructions[137] = new Instruction("NOP", 0, 2, 0, 5, this
+    ::NOP);
+    instructions[138] = new Instruction("TXA", 0, 2, 1, 6, this
+    ::TXA);
+    instructions[139] = new Instruction("XAA", 0, 2, 0, 5, this
+    ::XAA);
+    instructions[140] = new Instruction("STY", 0, 4, 3, 1, this
+    ::STY);
+    instructions[141] = new Instruction("STA", 0, 4, 3, 1, this
+    ::STA);
+    instructions[142] = new Instruction("STX", 0, 4, 3, 1, this
+    ::STX);
+    instructions[143] = new Instruction("SAX", 0, 4, 0, 1, this
+    ::SAX);
+    instructions[144] = new Instruction("BCC", 1, 2, 2, 10, this
+    ::BCC);
+    instructions[145] = new Instruction("STA", 0, 6, 2, 9, this
+    ::STA);
+    instructions[146] = new Instruction("KIL", 0, 2, 0, 6, this
+    ::KIL);
+    instructions[147] = new Instruction("AHX", 0, 6, 0, 9, this
+    ::AHX);
+    instructions[148] = new Instruction("STY", 0, 4, 2, 12, this
+    ::STY);
+    instructions[149] = new Instruction("STA", 0, 4, 2, 12, this
+    ::STA);
+    instructions[150] = new Instruction("STX", 0, 4, 2, 13, this
+    ::STX);
+    instructions[151] = new Instruction("SAX", 0, 4, 0, 13, this
+    ::SAX);
+    instructions[152] = new Instruction("TYA", 0, 2, 1, 6, this
+    ::TYA);
+    instructions[153] = new Instruction("STA", 0, 5, 3, 3, this
+    ::STA);
+    instructions[154] = new Instruction("TXS", 0, 2, 1, 6, this
+    ::TXS);
+    instructions[155] = new Instruction("TAS", 0, 5, 0, 3, this
+    ::TAS);
+    instructions[156] = new Instruction("SHY", 0, 5, 0, 2, this
+    ::SHY);
+    instructions[157] = new Instruction("STA", 0, 5, 3, 2, this
+    ::STA);
+    instructions[158] = new Instruction("SHX", 0, 5, 0, 3, this
+    ::SHX);
+    instructions[159] = new Instruction("AHX", 0, 5, 0, 3, this
+    ::AHX);
+    instructions[160] = new Instruction("LDY", 0, 2, 2, 5, this
+    ::LDY);
+    instructions[161] = new Instruction("LDA", 0, 6, 2, 7, this
+    ::LDA);
+    instructions[162] = new Instruction("LDX", 0, 2, 2, 5, this
+    ::LDX);
+    instructions[163] = new Instruction("LAX", 0, 6, 0, 7, this
+    ::LAX);
+    instructions[164] = new Instruction("LDY", 0, 3, 2, 11, this
+    ::LDY);
+    instructions[165] = new Instruction("LDA", 0, 3, 2, 11, this
+    ::LDA);
+    instructions[166] = new Instruction("LDX", 0, 3, 2, 11, this
+    ::LDX);
+    instructions[167] = new Instruction("LAX", 0, 3, 0, 11, this
+    ::LAX);
+    instructions[168] = new Instruction("TAY", 0, 2, 1, 6, this
+    ::TAY);
+    instructions[169] = new Instruction("LDA", 0, 2, 2, 5, this
+    ::LDA);
+    instructions[170] = new Instruction("TAX", 0, 2, 1, 6, this
+    ::TAX);
+    instructions[171] = new Instruction("LAX", 0, 2, 0, 5, this
+    ::LAX);
+    instructions[172] = new Instruction("LDY", 0, 4, 3, 1, this
+    ::LDY);
+    instructions[173] = new Instruction("LDA", 0, 4, 3, 1, this
+    ::LDA);
+    instructions[174] = new Instruction("LDX", 0, 4, 3, 1, this
+    ::LDX);
+    instructions[175] = new Instruction("LAX", 0, 4, 0, 1, this
+    ::LAX);
+    instructions[176] = new Instruction("BCS", 1, 2, 2, 10, this
+    ::BCS);
+    instructions[177] = new Instruction("LDA", 1, 5, 2, 9, this
+    ::LDA);
+    instructions[178] = new Instruction("KIL", 0, 2, 0, 6, this
+    ::KIL);
+    instructions[179] = new Instruction("LAX", 1, 5, 0, 9, this
+    ::LAX);
+    instructions[180] = new Instruction("LDY", 0, 4, 2, 12, this
+    ::LDY);
+    instructions[181] = new Instruction("LDA", 0, 4, 2, 12, this
+    ::LDA);
+    instructions[182] = new Instruction("LDX", 0, 4, 2, 13, this
+    ::LDX);
+    instructions[183] = new Instruction("LAX", 0, 4, 0, 13, this
+    ::LAX);
+    instructions[184] = new Instruction("CLV", 0, 2, 1, 6, this
+    ::CLV);
+    instructions[185] = new Instruction("LDA", 1, 4, 3, 3, this
+    ::LDA);
+    instructions[186] = new Instruction("TSX", 0, 2, 1, 6, this
+    ::TSX);
+    instructions[187] = new Instruction("LAS", 1, 4, 0, 3, this
+    ::LAS);
+    instructions[188] = new Instruction("LDY", 1, 4, 3, 2, this
+    ::LDY);
+    instructions[189] = new Instruction("LDA", 1, 4, 3, 2, this
+    ::LDA);
+    instructions[190] = new Instruction("LDX", 1, 4, 3, 3, this
+    ::LDX);
+    instructions[191] = new Instruction("LAX", 1, 4, 0, 3, this
+    ::LAX);
+    instructions[192] = new Instruction("CPY", 0, 2, 2, 5, this
+    ::CPY);
+    instructions[193] = new Instruction("CMP", 0, 6, 2, 7, this
+    ::CMP);
+    instructions[194] = new Instruction("NOP", 0, 2, 0, 5, this
+    ::NOP);
+    instructions[195] = new Instruction("DCP", 0, 8, 0, 7, this
+    ::DCP);
+    instructions[196] = new Instruction("CPY", 0, 3, 2, 11, this
+    ::CPY);
+    instructions[197] = new Instruction("CMP", 0, 3, 2, 11, this
+    ::CMP);
+    instructions[198] = new Instruction("DEC", 0, 5, 2, 11, this
+    ::DEC);
+    instructions[199] = new Instruction("DCP", 0, 5, 0, 11, this
+    ::DCP);
+    instructions[200] = new Instruction("INY", 0, 2, 1, 6, this
+    ::INY);
+    instructions[201] = new Instruction("CMP", 0, 2, 2, 5, this
+    ::CMP);
+    instructions[202] = new Instruction("DEX", 0, 2, 1, 6, this
+    ::DEX);
+    instructions[203] = new Instruction("AXS", 0, 2, 0, 5, this
+    ::AXS);
+    instructions[204] = new Instruction("CPY", 0, 4, 3, 1, this
+    ::CPY);
+    instructions[205] = new Instruction("CMP", 0, 4, 3, 1, this
+    ::CMP);
+    instructions[206] = new Instruction("DEC", 0, 6, 3, 1, this
+    ::DEC);
+    instructions[207] = new Instruction("DCP", 0, 6, 0, 1, this
+    ::DCP);
+    instructions[208] = new Instruction("BNE", 1, 2, 2, 10, this
+    ::BNE);
+    instructions[209] = new Instruction("CMP", 1, 5, 2, 9, this
+    ::CMP);
+    instructions[210] = new Instruction("KIL", 0, 2, 0, 6, this
+    ::KIL);
+    instructions[211] = new Instruction("DCP", 0, 8, 0, 9, this
+    ::DCP);
+    instructions[212] = new Instruction("NOP", 0, 4, 2, 12, this
+    ::NOP);
+    instructions[213] = new Instruction("CMP", 0, 4, 2, 12, this
+    ::CMP);
+    instructions[214] = new Instruction("DEC", 0, 6, 2, 12, this
+    ::DEC);
+    instructions[215] = new Instruction("DCP", 0, 6, 0, 12, this
+    ::DCP);
+    instructions[216] = new Instruction("CLD", 0, 2, 1, 6, this
+    ::CLD);
+    instructions[217] = new Instruction("CMP", 1, 4, 3, 3, this
+    ::CMP);
+    instructions[218] = new Instruction("NOP", 0, 2, 1, 6, this
+    ::NOP);
+    instructions[219] = new Instruction("DCP", 0, 7, 0, 3, this
+    ::DCP);
+    instructions[220] = new Instruction("NOP", 1, 4, 3, 2, this
+    ::NOP);
+    instructions[221] = new Instruction("CMP", 1, 4, 3, 2, this
+    ::CMP);
+    instructions[222] = new Instruction("DEC", 0, 7, 3, 2, this
+    ::DEC);
+    instructions[223] = new Instruction("DCP", 0, 7, 0, 2, this
+    ::DCP);
+    instructions[224] = new Instruction("CPX", 0, 2, 2, 5, this
+    ::CPX);
+    instructions[225] = new Instruction("SBC", 0, 6, 2, 7, this
+    ::SBC);
+    instructions[226] = new Instruction("NOP", 0, 2, 0, 5, this
+    ::NOP);
+    instructions[227] = new Instruction("ISC", 0, 8, 0, 7, this
+    ::ISC);
+    instructions[228] = new Instruction("CPX", 0, 3, 2, 11, this
+    ::CPX);
+    instructions[229] = new Instruction("SBC", 0, 3, 2, 11, this
+    ::SBC);
+    instructions[230] = new Instruction("INC", 0, 5, 2, 11, this
+    ::INC);
+    instructions[231] = new Instruction("ISC", 0, 5, 0, 11, this
+    ::ISC);
+    instructions[232] = new Instruction("INX", 0, 2, 1, 6, this
+    ::INX);
+    instructions[233] = new Instruction("SBC", 0, 2, 2, 5, this
+    ::SBC);
+    instructions[234] = new Instruction("NOP", 0, 2, 1, 6, this
+    ::NOP);
+    instructions[235] = new Instruction("SBC", 0, 2, 0, 5, this
+    ::SBC);
+    instructions[236] = new Instruction("CPX", 0, 4, 3, 1, this
+    ::CPX);
+    instructions[237] = new Instruction("SBC", 0, 4, 3, 1, this
+    ::SBC);
+    instructions[238] = new Instruction("INC", 0, 6, 3, 1, this
+    ::INC);
+    instructions[239] = new Instruction("ISC", 0, 6, 0, 1, this
+    ::ISC);
+    instructions[240] = new Instruction("BEQ", 1, 2, 2, 10, this
+    ::BEQ);
+    instructions[241] = new Instruction("SBC", 1, 5, 2, 9, this
+    ::SBC);
+    instructions[242] = new Instruction("KIL", 0, 2, 0, 6, this
+    ::KIL);
+    instructions[243] = new Instruction("ISC", 0, 8, 0, 9, this
+    ::ISC);
+    instructions[244] = new Instruction("NOP", 0, 4, 2, 12, this
+    ::NOP);
+    instructions[245] = new Instruction("SBC", 0, 4, 2, 12, this
+    ::SBC);
+    instructions[246] = new Instruction("INC", 0, 6, 2, 12, this
+    ::INC);
+    instructions[247] = new Instruction("ISC", 0, 6, 0, 12, this
+    ::ISC);
+    instructions[248] = new Instruction("SED", 0, 2, 1, 6, this
+    ::SED);
+    instructions[249] = new Instruction("SBC", 1, 4, 3, 3, this
+    ::SBC);
+    instructions[250] = new Instruction("NOP", 0, 2, 1, 6, this
+    ::NOP);
+    instructions[251] = new Instruction("ISC", 0, 7, 0, 3, this
+    ::ISC);
+    instructions[252] = new Instruction("NOP", 1, 4, 3, 2, this
+    ::NOP);
+    instructions[253] = new Instruction("SBC", 1, 4, 3, 2, this
+    ::SBC);
+    instructions[254] = new Instruction("INC", 0, 7, 3, 2, this
+    ::INC);
+    instructions[255] = new Instruction("ISC", 0, 7, 0, 2, this
+    ::ISC);
+
+}
