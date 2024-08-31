@@ -1,25 +1,16 @@
-//
-// Created by Aaron Isaac on 5/20/24.
-//
-
 #ifndef NES_EMU_MAPPER_H
 #define NES_EMU_MAPPER_H
 
-
 class Mapper {
 
+public:
+    char Read(short i) {
+        return 0;
+    }
+
+    void Write(short i, char i1) {
+
+    }
 };
 
-
 #endif //NES_EMU_MAPPER_H
-package co.aisaac;
-
-public class Mapper {
-public Mapper(Ram ram) {
-
-    }
-
-public void step() {
-
-    }
-}
