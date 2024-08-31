@@ -1,45 +1,29 @@
-//
-// Created by Aaron Isaac on 5/20/24.
-//
-
 #ifndef NES_EMU_CARTRIDGE_H
 #define NES_EMU_CARTRIDGE_H
 
-
-class Cartridge {
-
-};
-
-
-#endif //NES_EMU_CARTRIDGE_H
-package co.aisaac;
+#include <vector>
 
 // Cartridge loaded from a .nes file
 // http://wiki.nesdev.com/w/index.php/INES
 // http://nesdev.com/NESDoc.pdf (page 28)
-public class Cartridge {
+class Cartridge {
 
-    // PRG-ROM
-    byte[] prg;
-
-    // CHR-ROM
-    byte[] chr;
-
-    // mapper type for this game
-    byte mapper;
-
-    // mirroring mode?
-    byte mirror;
-
-    // does battery exist?
-    byte battery;
-
-public Cartridge(String rom) {
-        // check if file exists
-        // check if headers are proper
-        // start loading the cartridge
-        // throw ise if fails
+public:
+    // prg-rom banks
+    std::vector<char> prg;
+    // chr-rom banks
+    std::vector<char> chr;
+    // mapper type
+    int mapper;
+    // mirroring mode
+    int mirror;
+    // battery backed ram
+    int battery;
 
 
+    Cartridge(std::vector<char> prg, std::vector<char> chr, int mapper, int mirror, int battery)
+            : prg(std::move(prg)), chr(std::move(chr)), mapper(mapper), mirror(mirror), battery(battery) {
     }
-}
+};
+
+#endif //NES_EMU_CARTRIDGE_H
