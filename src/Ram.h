@@ -2,133 +2,144 @@
 #define CPPTEST_RAM_H
 
 #include <cstddef>
+#include <iostream>
+#include "PPU.h"
+#include "APU.h"
+#include "Controller.h"
+#include "Mapper.h"
 
 class Ram {
 
-    /* this is all our memory mapping information */
-    std::byte total_ram[0xFFFF]{std::byte{0}};
+public:
 
-    /* first 2kb are internal ram */
-    std::byte *zero_page = &total_ram[0];
-    int zero_page_len = 0x100;
-    std::byte *cpu_stack = &total_ram[0x100];
-    int cpu_stack_len = 0x100;
-    std::byte *cpu_ram = &total_ram[0x200];
-    int cpu_ram_len = 0x600;
+    PPU* ppu;
+    APU* apu;
+    Controller* controller1;
+    Controller* controller2;
+    Mapper* mapper;
 
-    /* then 3 x 2kb mirrors of first 2kb */
-    int mirror_len = 0x800; // 2 kb each
-    std::byte *mirror1 = &total_ram[0];
-    std::byte *mirror2 = &total_ram[0];
-    std::byte *mirror3 = &total_ram[0];
+    char ram[2048] = {0};
 
-    /* 8 bytes for PPU registers */
-    std::byte *ppu_reg = &total_ram[0x2000];
 
-    /* 8kb - 8b for mirrors of PPU reg */
-    std::byte *ppu_reg_mirror = &total_ram[0x2000]; // todo make 8k of mirrors, or don't
+    Ram(PPU* ppu, APU* apu, Controller* controller1, Controller* controller2, Mapper* mapper) {
+        this->ppu = ppu;
+        this->apu = apu;
+        this->controller1 = controller1;
+        this->controller2 = controller2;
+        this->mapper = mapper;
+    }
 
-    /* 24b for APU, 8b disabled, $4000 to 401F, 32b total*/
-    std::byte *apu = &total_ram[0x4000]; // this goes to 0x4020
+    char Read(short address) {
+        if( address < 0x2000){
+            return ram[address%0x0800];
+        } else if (address < 0x4000){
+            return ppu->readRegister(0x2000 + address%8);
+        } else if (address == 0x4014){
 
-    /* now we hit the cartridge, it goes from 0x4020 to 0x8000, 32kb - 32b*/
-    std::byte *cartridge = &total_ram[0x4020];
+            return ppu->readRegister(address);
+        } else if (address == 0x4015){
+
+            return apu->readRegister(address);
+        } else if (address == 0x4016){
+
+            return controller1->Read();
+        } else if (address == 0x4017){
+
+            return controller2->Read();
+        } else if (address < 0x6000){
+            // TODO: I/O registers
+            return 0;
+        } else if (address >= 0x6000){
+            return mapper->Read(address);
+        }else {
+            std::cout << "unhandled cpu memory read at address: " << address << std::endl;
+        }
+        return 0;
+    }
+
+    void Write(short address, char value) {
+        if (address < 0x2000) {
+            ram[address % 0x0800] = value;
+        } else if (address < 0x4000) {
+            ppu->writeRegister(0x2000 + address % 8, value);
+        } else if (address < 0x4014) {
+            apu->writeRegister(address, value);
+        } else if (address == 0x4014) {
+            ppu->writeRegister(address, value);
+        } else if (address == 0x4015) {
+            apu->writeRegister(address, value);
+        } else if (address == 0x4016) {
+            controller1->Write(value);
+            controller2->Write(value);
+        } else if (address == 0x4017) {
+            apu->writeRegister(address, value);
+        } else if (address < 0x6000) {
+
+        } else if (address >= 0x6000) {
+            mapper->Write(address, value);
+        } else {
+            std::cout << "unhandled cpu memory write at address: " << address << std::endl;
+        }
+    }
+
+// PPU Memory Map
+
+    char ReadPpuMemory(short address)  {
+        auto address_div = address % 0x4000;
+        if (address_div < 0x2000) {
+            return mapper->Read(address_div);
+        } else if (address < 0x3F00) {
+            auto mode = ppu->cartridge->mirror;
+            return ppu->nameTableData[MirrorAddress(mode, address_div) % 2048];
+        } else if (address < 0x4000) {
+            return ppu->readPalette(address_div % 32);
+        } else {
+            std::cout << "unhandled ppu memory read at address: " << address << std::endl;
+        }
+        return 0;
+    }
+
+    void WritePpuMemory(short address, char value) {
+        auto address_div = address % 0x4000;
+
+        if (address_div < 0x2000) {
+            mapper->Write(address_div, value);
+        } else if (address_div < 0x3F00) {
+            auto mode = ppu->cartridge->mirror;
+            ppu->nameTableData[MirrorAddress(mode, address_div) % 2048] = value;
+        } else if (address_div < 0x4000) {
+            ppu->writePalette(address_div % 32, value);
+        } else {
+            std::cout << "unhandled ppu memory write at address: " << address << std::endl;
+        }
+    }
+
+// Mirroring Modes
+
+    enum {
+        MirrorHorizontal,
+        MirrorVertical,
+        MirrorSingle0,
+        MirrorSingle1,
+        MirrorFour
+    };
+
+    char MirrorLookup[5][4] = {
+        {0, 0, 1, 1},
+        {0, 1, 0, 1},
+        {0, 0, 0, 0},
+        {1, 1, 1, 1},
+        {0, 1, 2, 3},
+    };
+
+    short MirrorAddress(char mode, short address) {
+        auto address_div = (address - 0x2000) % 0x1000;
+        auto table = address_div / 0x0400;
+        auto offset = address_div % 0x0400;
+        return 0x2000 + MirrorLookup[mode][table]*0x0400 + offset;
+    }
+
 };
 
 
 #endif //CPPTEST_RAM_H
-package co.aisaac;
-
-import static co.aisaac.Utils.ub;
-
-public class Ram {
-    /*
-    We don't need buses, everything deals with ram
-
-    NES supports 16 bit addressing, up to 64kb of ram
-
-    0x0000 to 0x00FF -> 256 bytes of zero-page ram
-    */
-
-    byte[] ram = new byte[2048];
-
-    byte read(short address) {
-        return ram[address];
-    }
-
-    void write(short address, int value) {
-        if (address <= 0x00FF) {
-            // 0000 -> 00FF
-            // zero page
-
-        } else if (address <= 0x01FF) {
-            // 0100 -> 01FF
-            // stack
-            /*
-            The stack is located at memory locations $0100-$01FF. The stack pointer is an 8-bit register
-            which serves as an offset from $0100. The stack works top-down, so when a byte is pushed
-            on to the stack, the stack pointer is decremented and when a byte is pulled from the stack,
-            the stack pointer is incremented. There is no detection of stack overflow and the stack
-            pointer will just wrap around from $00 to $FF.
-             */
-
-        } else if (address <= 0x07FF) {
-            // 0200 -> 07FF
-            // ram
-            /*
-            $0000-$07FF are mirrored three times at $0800-$1FFF. This means that, for example, any
-            data written to $0000 will also be written to $0800, $1000 and $1800
-             */
-
-        } else if (address <= 0x1FFF) {
-            // 0800 -> 1FFF
-            // mirrors of range 0x0000 to 0x07FF
-
-        } else if (address <= 0x4000) {
-            // 2000 -> 2007
-            // io registers
-            /* The memory mapped
-            I/O registers are located at $2000-$401F. Locations $2000-$2007 are mirrored every 8 bytes
-            in the region $2008-$3FFF and the remaining registers follow this mirroring.
-             */
-
-            // 2008 -> 3FFF
-            // mirrors of io registers
-
-        } else if (address <= 0x401F) {
-            // 4000 -> 401F
-            // io registers and mirrors
-
-        } else if (address <= 0x5FFF) {
-            // 4020 -> 5FFF
-            // expansion rom
-
-        } else if (address <= 0x7FFF) {
-            // 6000 -> 7FFF
-            /*
-            SRAM (WRAM) is the Save RAM, the addresses used to access RAM in the cartridges for storing save games.
-             */
-
-        } else if (address <= 0xBFFF) {
-            // 8000 -> BFFF
-            // PRG-ROM lower bank
-
-        } else if (address <= 0xFFFF) {
-            // C000 -> FFFF
-            // PRG-ROM upper bank
-
-        } else {
-            return;
-            // 0xFFFF
-            // impossible
-
-        }
-        write(address, (byte) value);
-    }
-
-    void write(short address, byte value) {
-        ram[address] = value;
-    }
-
-}
-
