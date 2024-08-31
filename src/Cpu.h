@@ -4,479 +4,470 @@
 #include <bitset>
 
 #include "Ram.h"
+#include "Console.h"
 
 class Cpu {
-   private:
-    // special
-    // The 2-byte program counter PC supports 65536 direct (unbanked) memory
-    // locations, however not all values are sent to the cartridge. It can be
-    // accessed either by  allowing CPU's internal fetch logic increment the
-    // address bus, an interrupt (NMI, Reset, IRQ/BRQ), and using the
-    // RTS/JMP/JSR/Branch instructions.
-    std::bitset<16> program_counter{0x0};  // $PC
-    std::bitset<8> status_register;        // $SR
-    std::bitset<8> stack_pointer{0x0};     // $SP
+public:
 
-    // general
-    // A is byte-wide and along with the arithmetic logic unit (ALU), supports
-    // using the status register for carrying, overflow detection, and so on.
-    std::bitset<8> accumulator{0x0};  // $A
-    std::bitset<8> x_register{0x0};   // $X
-    std::bitset<8> y_register{0x0};   // $Y
+// interrupt types
+    enum interupt_types {
+        interruptNone,
+        interruptNMI,
+        interruptIRQ
+    };
 
-    template<size_t N>
-    static void increment(std::bitset<N> &bitset);
+// addressing modes
+    enum addressing_mode {
+        modeAbsolute,
+        modeAbsoluteX,
+        modeAbsoluteY,
+        modeAccumulator,
+        modeImmediate,
+        modeImplied,
+        modeIndexedIndirect,
+        modeIndirect,
+        modeIndirectIndexed,
+        modeRelative,
+        modeZeroPage,
+        modeZeroPageX,
+        modeZeroPageY
+    };
+
+// instructionModes indicates the addressing mode for each instruction
+    char instructionModes[256] = {
+            6, 7, 6, 7, 11, 11, 11, 11, 6, 5, 4, 5, 1, 1, 1, 1,
+            10, 9, 6, 9, 12, 12, 12, 12, 6, 3, 6, 3, 2, 2, 2, 2,
+            1, 7, 6, 7, 11, 11, 11, 11, 6, 5, 4, 5, 1, 1, 1, 1,
+            10, 9, 6, 9, 12, 12, 12, 12, 6, 3, 6, 3, 2, 2, 2, 2,
+            6, 7, 6, 7, 11, 11, 11, 11, 6, 5, 4, 5, 1, 1, 1, 1,
+            10, 9, 6, 9, 12, 12, 12, 12, 6, 3, 6, 3, 2, 2, 2, 2,
+            6, 7, 6, 7, 11, 11, 11, 11, 6, 5, 4, 5, 8, 1, 1, 1,
+            10, 9, 6, 9, 12, 12, 12, 12, 6, 3, 6, 3, 2, 2, 2, 2,
+            5, 7, 5, 7, 11, 11, 11, 11, 6, 5, 6, 5, 1, 1, 1, 1,
+            10, 9, 6, 9, 12, 12, 13, 13, 6, 3, 6, 3, 2, 2, 3, 3,
+            5, 7, 5, 7, 11, 11, 11, 11, 6, 5, 6, 5, 1, 1, 1, 1,
+            10, 9, 6, 9, 12, 12, 13, 13, 6, 3, 6, 3, 2, 2, 3, 3,
+            5, 7, 5, 7, 11, 11, 11, 11, 6, 5, 6, 5, 1, 1, 1, 1,
+            10, 9, 6, 9, 12, 12, 12, 12, 6, 3, 6, 3, 2, 2, 2, 2,
+            5, 7, 5, 7, 11, 11, 11, 11, 6, 5, 6, 5, 1, 1, 1, 1,
+            10, 9, 6, 9, 12, 12, 12, 12, 6, 3, 6, 3, 2, 2, 2, 2,
+    };
+
+// instructionSizes indicates the size of each instruction in bytes
+    char instructionSizes[256] = {
+            2, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
+            2, 2, 0, 0, 2, 2, 2, 0, 1, 3, 1, 0, 3, 3, 3, 0,
+            3, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
+            2, 2, 0, 0, 2, 2, 2, 0, 1, 3, 1, 0, 3, 3, 3, 0,
+            1, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
+            2, 2, 0, 0, 2, 2, 2, 0, 1, 3, 1, 0, 3, 3, 3, 0,
+            1, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
+            2, 2, 0, 0, 2, 2, 2, 0, 1, 3, 1, 0, 3, 3, 3, 0,
+            2, 2, 0, 0, 2, 2, 2, 0, 1, 0, 1, 0, 3, 3, 3, 0,
+            2, 2, 0, 0, 2, 2, 2, 0, 1, 3, 1, 0, 0, 3, 0, 0,
+            2, 2, 2, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
+            2, 2, 0, 0, 2, 2, 2, 0, 1, 3, 1, 0, 3, 3, 3, 0,
+            2, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
+            2, 2, 0, 0, 2, 2, 2, 0, 1, 3, 1, 0, 3, 3, 3, 0,
+            2, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
+            2, 2, 0, 0, 2, 2, 2, 0, 1, 3, 1, 0, 3, 3, 3, 0,
+    };
+
+// instructionCycles indicates the number of cycles used by each instruction,
+// not including conditional cycles
+    char instructionCycles[256] = {
+            7, 6, 2, 8, 3, 3, 5, 5, 3, 2, 2, 2, 4, 4, 6, 6,
+            2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
+            6, 6, 2, 8, 3, 3, 5, 5, 4, 2, 2, 2, 4, 4, 6, 6,
+            2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
+            6, 6, 2, 8, 3, 3, 5, 5, 3, 2, 2, 2, 3, 4, 6, 6,
+            2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
+            6, 6, 2, 8, 3, 3, 5, 5, 4, 2, 2, 2, 5, 4, 6, 6,
+            2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
+            2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4,
+            2, 6, 2, 6, 4, 4, 4, 4, 2, 5, 2, 5, 5, 5, 5, 5,
+            2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4,
+            2, 5, 2, 5, 4, 4, 4, 4, 2, 4, 2, 4, 4, 4, 4, 4,
+            2, 6, 2, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6,
+            2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
+            2, 6, 2, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6,
+            2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
+    };
+
+// instructionPageCycles indicates the number of cycles used by each
+// instruction when a page is crossed
+    char instructionPageCycles[256] = {
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0,
+    };
+
+// instructionNames indicates the name of each instruction
+    std::string instructionNames[256] = {
+            "BRK", "ORA", "KIL", "SLO", "NOP", "ORA", "ASL", "SLO",
+            "PHP", "ORA", "ASL", "ANC", "NOP", "ORA", "ASL", "SLO",
+            "BPL", "ORA", "KIL", "SLO", "NOP", "ORA", "ASL", "SLO",
+            "CLC", "ORA", "NOP", "SLO", "NOP", "ORA", "ASL", "SLO",
+            "JSR", "AND", "KIL", "RLA", "BIT", "AND", "ROL", "RLA",
+            "PLP", "AND", "ROL", "ANC", "BIT", "AND", "ROL", "RLA",
+            "BMI", "AND", "KIL", "RLA", "NOP", "AND", "ROL", "RLA",
+            "SEC", "AND", "NOP", "RLA", "NOP", "AND", "ROL", "RLA",
+            "RTI", "EOR", "KIL", "SRE", "NOP", "EOR", "LSR", "SRE",
+            "PHA", "EOR", "LSR", "ALR", "JMP", "EOR", "LSR", "SRE",
+            "BVC", "EOR", "KIL", "SRE", "NOP", "EOR", "LSR", "SRE",
+            "CLI", "EOR", "NOP", "SRE", "NOP", "EOR", "LSR", "SRE",
+            "RTS", "ADC", "KIL", "RRA", "NOP", "ADC", "ROR", "RRA",
+            "PLA", "ADC", "ROR", "ARR", "JMP", "ADC", "ROR", "RRA",
+            "BVS", "ADC", "KIL", "RRA", "NOP", "ADC", "ROR", "RRA",
+            "SEI", "ADC", "NOP", "RRA", "NOP", "ADC", "ROR", "RRA",
+            "NOP", "STA", "NOP", "SAX", "STY", "STA", "STX", "SAX",
+            "DEY", "NOP", "TXA", "XAA", "STY", "STA", "STX", "SAX",
+            "BCC", "STA", "KIL", "AHX", "STY", "STA", "STX", "SAX",
+            "TYA", "STA", "TXS", "TAS", "SHY", "STA", "SHX", "AHX",
+            "LDY", "LDA", "LDX", "LAX", "LDY", "LDA", "LDX", "LAX",
+            "TAY", "LDA", "TAX", "LAX", "LDY", "LDA", "LDX", "LAX",
+            "BCS", "LDA", "KIL", "LAX", "LDY", "LDA", "LDX", "LAX",
+            "CLV", "LDA", "TSX", "LAS", "LDY", "LDA", "LDX", "LAX",
+            "CPY", "CMP", "NOP", "DCP", "CPY", "CMP", "DEC", "DCP",
+            "INY", "CMP", "DEX", "AXS", "CPY", "CMP", "DEC", "DCP",
+            "BNE", "CMP", "KIL", "DCP", "NOP", "CMP", "DEC", "DCP",
+            "CLD", "CMP", "NOP", "DCP", "NOP", "CMP", "DEC", "DCP",
+            "CPX", "SBC", "NOP", "ISC", "CPX", "SBC", "INC", "ISC",
+            "INX", "SBC", "NOP", "SBC", "CPX", "SBC", "INC", "ISC",
+            "BEQ", "SBC", "KIL", "ISC", "NOP", "SBC", "INC", "ISC",
+            "SED", "SBC", "NOP", "ISC", "NOP", "SBC", "INC", "ISC",
+    };
+
+
+    const int CPUFrequency = 1789773;
 
     Ram *ram;
+    long Cycles{};    // number of cycles
+    short PC{};       // program counter
+    char SP{};        // stack pointer
+    char A{};         // accumulator
+    char X{};         // x register
+    char Y{};         // y register
+    char C{};         // carry flag
+    char Z{};         // zero flag
+    char I{};         // interrupt disable flag
+    char D{};         // decimal mode flag
+    char B{};         // break command flag
+    char U{};         // unused flag
+    char V{};         // overflow flag
+    char N{};         // negative flag
+    int stall{};      // number of cycles to stall
 
-    enum class instruction;
+    // interrupt type to perform
+    interupt_types interrupt{interruptNone};
 
-    enum class addressing_mode;
-
-    static instruction decode();
-
-   public:
-    explicit Cpu(Ram *ram);
-
-    void step();
-
-    void execute(instruction instruction1);
-};
-
-#endif  // CPPTEST_CPU_H
-package co.aisaac;
-
-public class Cpu {
-
-    double cycles;
-
-    // program counter
-    short PC = 0;
-    // stack pointer
-    byte SP = 0;
-    // accumulator
-    byte A = 0;
-    // general
-    byte X = 0;
-    // general
-    byte Y = 0;
-
-    // status flags
-    byte C = 0; // carry
-    byte Z = 0; // zero
-    byte I = 0; // interrupt disable
-    byte D = 0; // decimal mode
-    byte B = 0; // break command
-    byte U = 0; // unused flag
-    byte V = 0; // overflow
-    byte N = 0; // negative flag
-
-    final Ram ram;
-
-    // for use by instructions
-    short address;
-    byte mode;
-
-
-    Instruction[] instructions = new Instruction[256];
-
-    Cpu(Ram ram) {
-        this.ram = ram;
-        createTable();
-        reset();
-    }
-
-private void createTable() {
-        instructions[0] = new Instruction("BRK", (byte) 0, (byte) 7, (byte) 2, (byte) 6, this::BRK);
-        instructions[1] = new Instruction("ORA", (byte) 0, (byte) 6, (byte) 2, (byte) 7, this::ORA);
-        instructions[2] = new Instruction("KIL", (byte) 0, (byte) 2, (byte) 0, (byte) 6, this::KIL);
-        instructions[3] = new Instruction("SLO", (byte) 0, (byte) 8, (byte) 0, (byte) 7, this::SLO);
-        instructions[4] = new Instruction("NOP", (byte) 0, (byte) 3, (byte) 2, (byte) 11, this::NOP);
-        instructions[5] = new Instruction("ORA", (byte) 0, (byte) 3, (byte) 2, (byte) 11, this::ORA);
-        instructions[6] = new Instruction("ASL", (byte) 0, (byte) 5, (byte) 2, (byte) 11, this::ASL);
-        instructions[7] = new Instruction("SLO", (byte) 0, (byte) 5, (byte) 0, (byte) 11, this::SLO);
-        instructions[8] = new Instruction("PHP", (byte) 0, (byte) 3, (byte) 1, (byte) 6, this::PHP);
-        instructions[9] = new Instruction("ORA", (byte) 0, (byte) 2, (byte) 2, (byte) 5, this::ORA);
-        instructions[10] = new Instruction("ASL", (byte) 0, (byte) 2, (byte) 1, (byte) 4, this::ASL);
-        instructions[11] = new Instruction("ANC", (byte) 0, (byte) 2, (byte) 0, (byte) 5, this::ANC);
-        instructions[12] = new Instruction("NOP", (byte) 0, (byte) 4, (byte) 3, (byte) 1, this::NOP);
-        instructions[13] = new Instruction("ORA", (byte) 0, (byte) 4, (byte) 3, (byte) 1, this::ORA);
-        instructions[14] = new Instruction("ASL", (byte) 0, (byte) 6, (byte) 3, (byte) 1, this::ASL);
-        instructions[15] = new Instruction("SLO", (byte) 0, (byte) 6, (byte) 0, (byte) 1, this::SLO);
-        instructions[16] = new Instruction("BPL", (byte) 1, (byte) 2, (byte) 2, (byte) 10, this::BPL);
-        instructions[17] = new Instruction("ORA", (byte) 1, (byte) 5, (byte) 2, (byte) 9, this::ORA);
-        instructions[18] = new Instruction("KIL", (byte) 0, (byte) 2, (byte) 0, (byte) 6, this::KIL);
-        instructions[19] = new Instruction("SLO", (byte) 0, (byte) 8, (byte) 0, (byte) 9, this::SLO);
-        instructions[20] = new Instruction("NOP", (byte) 0, (byte) 4, (byte) 2, (byte) 12, this::NOP);
-        instructions[21] = new Instruction("ORA", (byte) 0, (byte) 4, (byte) 2, (byte) 12, this::ORA);
-        instructions[22] = new Instruction("ASL", (byte) 0, (byte) 6, (byte) 2, (byte) 12, this::ASL);
-        instructions[23] = new Instruction("SLO", (byte) 0, (byte) 6, (byte) 0, (byte) 12, this::SLO);
-        instructions[24] = new Instruction("CLC", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::CLC);
-        instructions[25] = new Instruction("ORA", (byte) 1, (byte) 4, (byte) 3, (byte) 3, this::ORA);
-        instructions[26] = new Instruction("NOP", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::NOP);
-        instructions[27] = new Instruction("SLO", (byte) 0, (byte) 7, (byte) 0, (byte) 3, this::SLO);
-        instructions[28] = new Instruction("NOP", (byte) 1, (byte) 4, (byte) 3, (byte) 2, this::NOP);
-        instructions[29] = new Instruction("ORA", (byte) 1, (byte) 4, (byte) 3, (byte) 2, this::ORA);
-        instructions[30] = new Instruction("ASL", (byte) 0, (byte) 7, (byte) 3, (byte) 2, this::ASL);
-        instructions[31] = new Instruction("SLO", (byte) 0, (byte) 7, (byte) 0, (byte) 2, this::SLO);
-        instructions[32] = new Instruction("JSR", (byte) 0, (byte) 6, (byte) 3, (byte) 1, this::JSR);
-        instructions[33] = new Instruction("AND", (byte) 0, (byte) 6, (byte) 2, (byte) 7, this::AND);
-        instructions[34] = new Instruction("KIL", (byte) 0, (byte) 2, (byte) 0, (byte) 6, this::KIL);
-        instructions[35] = new Instruction("RLA", (byte) 0, (byte) 8, (byte) 0, (byte) 7, this::RLA);
-        instructions[36] = new Instruction("BIT", (byte) 0, (byte) 3, (byte) 2, (byte) 11, this::BIT);
-        instructions[37] = new Instruction("AND", (byte) 0, (byte) 3, (byte) 2, (byte) 11, this::AND);
-        instructions[38] = new Instruction("ROL", (byte) 0, (byte) 5, (byte) 2, (byte) 11, this::ROL);
-        instructions[39] = new Instruction("RLA", (byte) 0, (byte) 5, (byte) 0, (byte) 11, this::RLA);
-        instructions[40] = new Instruction("PLP", (byte) 0, (byte) 4, (byte) 1, (byte) 6, this::PLP);
-        instructions[41] = new Instruction("AND", (byte) 0, (byte) 2, (byte) 2, (byte) 5, this::AND);
-        instructions[42] = new Instruction("ROL", (byte) 0, (byte) 2, (byte) 1, (byte) 4, this::ROL);
-        instructions[43] = new Instruction("ANC", (byte) 0, (byte) 2, (byte) 0, (byte) 5, this::ANC);
-        instructions[44] = new Instruction("BIT", (byte) 0, (byte) 4, (byte) 3, (byte) 1, this::BIT);
-        instructions[45] = new Instruction("AND", (byte) 0, (byte) 4, (byte) 3, (byte) 1, this::AND);
-        instructions[46] = new Instruction("ROL", (byte) 0, (byte) 6, (byte) 3, (byte) 1, this::ROL);
-        instructions[47] = new Instruction("RLA", (byte) 0, (byte) 6, (byte) 0, (byte) 1, this::RLA);
-        instructions[48] = new Instruction("BMI", (byte) 1, (byte) 2, (byte) 2, (byte) 10, this::BMI);
-        instructions[49] = new Instruction("AND", (byte) 1, (byte) 5, (byte) 2, (byte) 9, this::AND);
-        instructions[50] = new Instruction("KIL", (byte) 0, (byte) 2, (byte) 0, (byte) 6, this::KIL);
-        instructions[51] = new Instruction("RLA", (byte) 0, (byte) 8, (byte) 0, (byte) 9, this::RLA);
-        instructions[52] = new Instruction("NOP", (byte) 0, (byte) 4, (byte) 2, (byte) 12, this::NOP);
-        instructions[53] = new Instruction("AND", (byte) 0, (byte) 4, (byte) 2, (byte) 12, this::AND);
-        instructions[54] = new Instruction("ROL", (byte) 0, (byte) 6, (byte) 2, (byte) 12, this::ROL);
-        instructions[55] = new Instruction("RLA", (byte) 0, (byte) 6, (byte) 0, (byte) 12, this::RLA);
-        instructions[56] = new Instruction("SEC", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::SEC);
-        instructions[57] = new Instruction("AND", (byte) 1, (byte) 4, (byte) 3, (byte) 3, this::AND);
-        instructions[58] = new Instruction("NOP", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::NOP);
-        instructions[59] = new Instruction("RLA", (byte) 0, (byte) 7, (byte) 0, (byte) 3, this::RLA);
-        instructions[60] = new Instruction("NOP", (byte) 1, (byte) 4, (byte) 3, (byte) 2, this::NOP);
-        instructions[61] = new Instruction("AND", (byte) 1, (byte) 4, (byte) 3, (byte) 2, this::AND);
-        instructions[62] = new Instruction("ROL", (byte) 0, (byte) 7, (byte) 3, (byte) 2, this::ROL);
-        instructions[63] = new Instruction("RLA", (byte) 0, (byte) 7, (byte) 0, (byte) 2, this::RLA);
-        instructions[64] = new Instruction("RTI", (byte) 0, (byte) 6, (byte) 1, (byte) 6, this::RTI);
-        instructions[65] = new Instruction("EOR", (byte) 0, (byte) 6, (byte) 2, (byte) 7, this::EOR);
-        instructions[66] = new Instruction("KIL", (byte) 0, (byte) 2, (byte) 0, (byte) 6, this::KIL);
-        instructions[67] = new Instruction("SRE", (byte) 0, (byte) 8, (byte) 0, (byte) 7, this::SRE);
-        instructions[68] = new Instruction("NOP", (byte) 0, (byte) 3, (byte) 2, (byte) 11, this::NOP);
-        instructions[69] = new Instruction("EOR", (byte) 0, (byte) 3, (byte) 2, (byte) 11, this::EOR);
-        instructions[70] = new Instruction("LSR", (byte) 0, (byte) 5, (byte) 2, (byte) 11, this::LSR);
-        instructions[71] = new Instruction("SRE", (byte) 0, (byte) 5, (byte) 0, (byte) 11, this::SRE);
-        instructions[72] = new Instruction("PHA", (byte) 0, (byte) 3, (byte) 1, (byte) 6, this::PHA);
-        instructions[73] = new Instruction("EOR", (byte) 0, (byte) 2, (byte) 2, (byte) 5, this::EOR);
-        instructions[74] = new Instruction("LSR", (byte) 0, (byte) 2, (byte) 1, (byte) 4, this::LSR);
-        instructions[75] = new Instruction("ALR", (byte) 0, (byte) 2, (byte) 0, (byte) 5, this::ALR);
-        instructions[76] = new Instruction("JMP", (byte) 0, (byte) 3, (byte) 3, (byte) 1, this::JMP);
-        instructions[77] = new Instruction("EOR", (byte) 0, (byte) 4, (byte) 3, (byte) 1, this::EOR);
-        instructions[78] = new Instruction("LSR", (byte) 0, (byte) 6, (byte) 3, (byte) 1, this::LSR);
-        instructions[79] = new Instruction("SRE", (byte) 0, (byte) 6, (byte) 0, (byte) 1, this::SRE);
-        instructions[80] = new Instruction("BVC", (byte) 1, (byte) 2, (byte) 2, (byte) 10, this::BVC);
-        instructions[81] = new Instruction("EOR", (byte) 1, (byte) 5, (byte) 2, (byte) 9, this::EOR);
-        instructions[82] = new Instruction("KIL", (byte) 0, (byte) 2, (byte) 0, (byte) 6, this::KIL);
-        instructions[83] = new Instruction("SRE", (byte) 0, (byte) 8, (byte) 0, (byte) 9, this::SRE);
-        instructions[84] = new Instruction("NOP", (byte) 0, (byte) 4, (byte) 2, (byte) 12, this::NOP);
-        instructions[85] = new Instruction("EOR", (byte) 0, (byte) 4, (byte) 2, (byte) 12, this::EOR);
-        instructions[86] = new Instruction("LSR", (byte) 0, (byte) 6, (byte) 2, (byte) 12, this::LSR);
-        instructions[87] = new Instruction("SRE", (byte) 0, (byte) 6, (byte) 0, (byte) 12, this::SRE);
-        instructions[88] = new Instruction("CLI", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::CLI);
-        instructions[89] = new Instruction("EOR", (byte) 1, (byte) 4, (byte) 3, (byte) 3, this::EOR);
-        instructions[90] = new Instruction("NOP", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::NOP);
-        instructions[91] = new Instruction("SRE", (byte) 0, (byte) 7, (byte) 0, (byte) 3, this::SRE);
-        instructions[92] = new Instruction("NOP", (byte) 1, (byte) 4, (byte) 3, (byte) 2, this::NOP);
-        instructions[93] = new Instruction("EOR", (byte) 1, (byte) 4, (byte) 3, (byte) 2, this::EOR);
-        instructions[94] = new Instruction("LSR", (byte) 0, (byte) 7, (byte) 3, (byte) 2, this::LSR);
-        instructions[95] = new Instruction("SRE", (byte) 0, (byte) 7, (byte) 0, (byte) 2, this::SRE);
-        instructions[96] = new Instruction("RTS", (byte) 0, (byte) 6, (byte) 1, (byte) 6, this::RTS);
-        instructions[97] = new Instruction("ADC", (byte) 0, (byte) 6, (byte) 2, (byte) 7, this::ADC);
-        instructions[98] = new Instruction("KIL", (byte) 0, (byte) 2, (byte) 0, (byte) 6, this::KIL);
-        instructions[99] = new Instruction("RRA", (byte) 0, (byte) 8, (byte) 0, (byte) 7, this::RRA);
-        instructions[100] = new Instruction("NOP", (byte) 0, (byte) 3, (byte) 2, (byte) 11, this::NOP);
-        instructions[101] = new Instruction("ADC", (byte) 0, (byte) 3, (byte) 2, (byte) 11, this::ADC);
-        instructions[102] = new Instruction("ROR", (byte) 0, (byte) 5, (byte) 2, (byte) 11, this::ROR);
-        instructions[103] = new Instruction("RRA", (byte) 0, (byte) 5, (byte) 0, (byte) 11, this::RRA);
-        instructions[104] = new Instruction("PLA", (byte) 0, (byte) 4, (byte) 1, (byte) 6, this::PLA);
-        instructions[105] = new Instruction("ADC", (byte) 0, (byte) 2, (byte) 2, (byte) 5, this::ADC);
-        instructions[106] = new Instruction("ROR", (byte) 0, (byte) 2, (byte) 1, (byte) 4, this::ROR);
-        instructions[107] = new Instruction("ARR", (byte) 0, (byte) 2, (byte) 0, (byte) 5, this::ARR);
-        instructions[108] = new Instruction("JMP", (byte) 0, (byte) 5, (byte) 3, (byte) 8, this::JMP);
-        instructions[109] = new Instruction("ADC", (byte) 0, (byte) 4, (byte) 3, (byte) 1, this::ADC);
-        instructions[110] = new Instruction("ROR", (byte) 0, (byte) 6, (byte) 3, (byte) 1, this::ROR);
-        instructions[111] = new Instruction("RRA", (byte) 0, (byte) 6, (byte) 0, (byte) 1, this::RRA);
-        instructions[112] = new Instruction("BVS", (byte) 1, (byte) 2, (byte) 2, (byte) 10, this::BVS);
-        instructions[113] = new Instruction("ADC", (byte) 1, (byte) 5, (byte) 2, (byte) 9, this::ADC);
-        instructions[114] = new Instruction("KIL", (byte) 0, (byte) 2, (byte) 0, (byte) 6, this::KIL);
-        instructions[115] = new Instruction("RRA", (byte) 0, (byte) 8, (byte) 0, (byte) 9, this::RRA);
-        instructions[116] = new Instruction("NOP", (byte) 0, (byte) 4, (byte) 2, (byte) 12, this::NOP);
-        instructions[117] = new Instruction("ADC", (byte) 0, (byte) 4, (byte) 2, (byte) 12, this::ADC);
-        instructions[118] = new Instruction("ROR", (byte) 0, (byte) 6, (byte) 2, (byte) 12, this::ROR);
-        instructions[119] = new Instruction("RRA", (byte) 0, (byte) 6, (byte) 0, (byte) 12, this::RRA);
-        instructions[120] = new Instruction("SEI", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::SEI);
-        instructions[121] = new Instruction("ADC", (byte) 1, (byte) 4, (byte) 3, (byte) 3, this::ADC);
-        instructions[122] = new Instruction("NOP", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::NOP);
-        instructions[123] = new Instruction("RRA", (byte) 0, (byte) 7, (byte) 0, (byte) 3, this::RRA);
-        instructions[124] = new Instruction("NOP", (byte) 1, (byte) 4, (byte) 3, (byte) 2, this::NOP);
-        instructions[125] = new Instruction("ADC", (byte) 1, (byte) 4, (byte) 3, (byte) 2, this::ADC);
-        instructions[126] = new Instruction("ROR", (byte) 0, (byte) 7, (byte) 3, (byte) 2, this::ROR);
-        instructions[127] = new Instruction("RRA", (byte) 0, (byte) 7, (byte) 0, (byte) 2, this::RRA);
-        instructions[128] = new Instruction("NOP", (byte) 0, (byte) 2, (byte) 2, (byte) 5, this::NOP);
-        instructions[129] = new Instruction("STA", (byte) 0, (byte) 6, (byte) 2, (byte) 7, this::STA);
-        instructions[130] = new Instruction("NOP", (byte) 0, (byte) 2, (byte) 0, (byte) 5, this::NOP);
-        instructions[131] = new Instruction("SAX", (byte) 0, (byte) 6, (byte) 0, (byte) 7, this::SAX);
-        instructions[132] = new Instruction("STY", (byte) 0, (byte) 3, (byte) 2, (byte) 11, this::STY);
-        instructions[133] = new Instruction("STA", (byte) 0, (byte) 3, (byte) 2, (byte) 11, this::STA);
-        instructions[134] = new Instruction("STX", (byte) 0, (byte) 3, (byte) 2, (byte) 11, this::STX);
-        instructions[135] = new Instruction("SAX", (byte) 0, (byte) 3, (byte) 0, (byte) 11, this::SAX);
-        instructions[136] = new Instruction("DEY", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::DEY);
-        instructions[137] = new Instruction("NOP", (byte) 0, (byte) 2, (byte) 0, (byte) 5, this::NOP);
-        instructions[138] = new Instruction("TXA", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::TXA);
-        instructions[139] = new Instruction("XAA", (byte) 0, (byte) 2, (byte) 0, (byte) 5, this::XAA);
-        instructions[140] = new Instruction("STY", (byte) 0, (byte) 4, (byte) 3, (byte) 1, this::STY);
-        instructions[141] = new Instruction("STA", (byte) 0, (byte) 4, (byte) 3, (byte) 1, this::STA);
-        instructions[142] = new Instruction("STX", (byte) 0, (byte) 4, (byte) 3, (byte) 1, this::STX);
-        instructions[143] = new Instruction("SAX", (byte) 0, (byte) 4, (byte) 0, (byte) 1, this::SAX);
-        instructions[144] = new Instruction("BCC", (byte) 1, (byte) 2, (byte) 2, (byte) 10, this::BCC);
-        instructions[145] = new Instruction("STA", (byte) 0, (byte) 6, (byte) 2, (byte) 9, this::STA);
-        instructions[146] = new Instruction("KIL", (byte) 0, (byte) 2, (byte) 0, (byte) 6, this::KIL);
-        instructions[147] = new Instruction("AHX", (byte) 0, (byte) 6, (byte) 0, (byte) 9, this::AHX);
-        instructions[148] = new Instruction("STY", (byte) 0, (byte) 4, (byte) 2, (byte) 12, this::STY);
-        instructions[149] = new Instruction("STA", (byte) 0, (byte) 4, (byte) 2, (byte) 12, this::STA);
-        instructions[150] = new Instruction("STX", (byte) 0, (byte) 4, (byte) 2, (byte) 13, this::STX);
-        instructions[151] = new Instruction("SAX", (byte) 0, (byte) 4, (byte) 0, (byte) 13, this::SAX);
-        instructions[152] = new Instruction("TYA", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::TYA);
-        instructions[153] = new Instruction("STA", (byte) 0, (byte) 5, (byte) 3, (byte) 3, this::STA);
-        instructions[154] = new Instruction("TXS", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::TXS);
-        instructions[155] = new Instruction("TAS", (byte) 0, (byte) 5, (byte) 0, (byte) 3, this::TAS);
-        instructions[156] = new Instruction("SHY", (byte) 0, (byte) 5, (byte) 0, (byte) 2, this::SHY);
-        instructions[157] = new Instruction("STA", (byte) 0, (byte) 5, (byte) 3, (byte) 2, this::STA);
-        instructions[158] = new Instruction("SHX", (byte) 0, (byte) 5, (byte) 0, (byte) 3, this::SHX);
-        instructions[159] = new Instruction("AHX", (byte) 0, (byte) 5, (byte) 0, (byte) 3, this::AHX);
-        instructions[160] = new Instruction("LDY", (byte) 0, (byte) 2, (byte) 2, (byte) 5, this::LDY);
-        instructions[161] = new Instruction("LDA", (byte) 0, (byte) 6, (byte) 2, (byte) 7, this::LDA);
-        instructions[162] = new Instruction("LDX", (byte) 0, (byte) 2, (byte) 2, (byte) 5, this::LDX);
-        instructions[163] = new Instruction("LAX", (byte) 0, (byte) 6, (byte) 0, (byte) 7, this::LAX);
-        instructions[164] = new Instruction("LDY", (byte) 0, (byte) 3, (byte) 2, (byte) 11, this::LDY);
-        instructions[165] = new Instruction("LDA", (byte) 0, (byte) 3, (byte) 2, (byte) 11, this::LDA);
-        instructions[166] = new Instruction("LDX", (byte) 0, (byte) 3, (byte) 2, (byte) 11, this::LDX);
-        instructions[167] = new Instruction("LAX", (byte) 0, (byte) 3, (byte) 0, (byte) 11, this::LAX);
-        instructions[168] = new Instruction("TAY", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::TAY);
-        instructions[169] = new Instruction("LDA", (byte) 0, (byte) 2, (byte) 2, (byte) 5, this::LDA);
-        instructions[170] = new Instruction("TAX", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::TAX);
-        instructions[171] = new Instruction("LAX", (byte) 0, (byte) 2, (byte) 0, (byte) 5, this::LAX);
-        instructions[172] = new Instruction("LDY", (byte) 0, (byte) 4, (byte) 3, (byte) 1, this::LDY);
-        instructions[173] = new Instruction("LDA", (byte) 0, (byte) 4, (byte) 3, (byte) 1, this::LDA);
-        instructions[174] = new Instruction("LDX", (byte) 0, (byte) 4, (byte) 3, (byte) 1, this::LDX);
-        instructions[175] = new Instruction("LAX", (byte) 0, (byte) 4, (byte) 0, (byte) 1, this::LAX);
-        instructions[176] = new Instruction("BCS", (byte) 1, (byte) 2, (byte) 2, (byte) 10, this::BCS);
-        instructions[177] = new Instruction("LDA", (byte) 1, (byte) 5, (byte) 2, (byte) 9, this::LDA);
-        instructions[178] = new Instruction("KIL", (byte) 0, (byte) 2, (byte) 0, (byte) 6, this::KIL);
-        instructions[179] = new Instruction("LAX", (byte) 1, (byte) 5, (byte) 0, (byte) 9, this::LAX);
-        instructions[180] = new Instruction("LDY", (byte) 0, (byte) 4, (byte) 2, (byte) 12, this::LDY);
-        instructions[181] = new Instruction("LDA", (byte) 0, (byte) 4, (byte) 2, (byte) 12, this::LDA);
-        instructions[182] = new Instruction("LDX", (byte) 0, (byte) 4, (byte) 2, (byte) 13, this::LDX);
-        instructions[183] = new Instruction("LAX", (byte) 0, (byte) 4, (byte) 0, (byte) 13, this::LAX);
-        instructions[184] = new Instruction("CLV", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::CLV);
-        instructions[185] = new Instruction("LDA", (byte) 1, (byte) 4, (byte) 3, (byte) 3, this::LDA);
-        instructions[186] = new Instruction("TSX", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::TSX);
-        instructions[187] = new Instruction("LAS", (byte) 1, (byte) 4, (byte) 0, (byte) 3, this::LAS);
-        instructions[188] = new Instruction("LDY", (byte) 1, (byte) 4, (byte) 3, (byte) 2, this::LDY);
-        instructions[189] = new Instruction("LDA", (byte) 1, (byte) 4, (byte) 3, (byte) 2, this::LDA);
-        instructions[190] = new Instruction("LDX", (byte) 1, (byte) 4, (byte) 3, (byte) 3, this::LDX);
-        instructions[191] = new Instruction("LAX", (byte) 1, (byte) 4, (byte) 0, (byte) 3, this::LAX);
-        instructions[192] = new Instruction("CPY", (byte) 0, (byte) 2, (byte) 2, (byte) 5, this::CPY);
-        instructions[193] = new Instruction("CMP", (byte) 0, (byte) 6, (byte) 2, (byte) 7, this::CMP);
-        instructions[194] = new Instruction("NOP", (byte) 0, (byte) 2, (byte) 0, (byte) 5, this::NOP);
-        instructions[195] = new Instruction("DCP", (byte) 0, (byte) 8, (byte) 0, (byte) 7, this::DCP);
-        instructions[196] = new Instruction("CPY", (byte) 0, (byte) 3, (byte) 2, (byte) 11, this::CPY);
-        instructions[197] = new Instruction("CMP", (byte) 0, (byte) 3, (byte) 2, (byte) 11, this::CMP);
-        instructions[198] = new Instruction("DEC", (byte) 0, (byte) 5, (byte) 2, (byte) 11, this::DEC);
-        instructions[199] = new Instruction("DCP", (byte) 0, (byte) 5, (byte) 0, (byte) 11, this::DCP);
-        instructions[200] = new Instruction("INY", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::INY);
-        instructions[201] = new Instruction("CMP", (byte) 0, (byte) 2, (byte) 2, (byte) 5, this::CMP);
-        instructions[202] = new Instruction("DEX", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::DEX);
-        instructions[203] = new Instruction("AXS", (byte) 0, (byte) 2, (byte) 0, (byte) 5, this::AXS);
-        instructions[204] = new Instruction("CPY", (byte) 0, (byte) 4, (byte) 3, (byte) 1, this::CPY);
-        instructions[205] = new Instruction("CMP", (byte) 0, (byte) 4, (byte) 3, (byte) 1, this::CMP);
-        instructions[206] = new Instruction("DEC", (byte) 0, (byte) 6, (byte) 3, (byte) 1, this::DEC);
-        instructions[207] = new Instruction("DCP", (byte) 0, (byte) 6, (byte) 0, (byte) 1, this::DCP);
-        instructions[208] = new Instruction("BNE", (byte) 1, (byte) 2, (byte) 2, (byte) 10, this::BNE);
-        instructions[209] = new Instruction("CMP", (byte) 1, (byte) 5, (byte) 2, (byte) 9, this::CMP);
-        instructions[210] = new Instruction("KIL", (byte) 0, (byte) 2, (byte) 0, (byte) 6, this::KIL);
-        instructions[211] = new Instruction("DCP", (byte) 0, (byte) 8, (byte) 0, (byte) 9, this::DCP);
-        instructions[212] = new Instruction("NOP", (byte) 0, (byte) 4, (byte) 2, (byte) 12, this::NOP);
-        instructions[213] = new Instruction("CMP", (byte) 0, (byte) 4, (byte) 2, (byte) 12, this::CMP);
-        instructions[214] = new Instruction("DEC", (byte) 0, (byte) 6, (byte) 2, (byte) 12, this::DEC);
-        instructions[215] = new Instruction("DCP", (byte) 0, (byte) 6, (byte) 0, (byte) 12, this::DCP);
-        instructions[216] = new Instruction("CLD", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::CLD);
-        instructions[217] = new Instruction("CMP", (byte) 1, (byte) 4, (byte) 3, (byte) 3, this::CMP);
-        instructions[218] = new Instruction("NOP", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::NOP);
-        instructions[219] = new Instruction("DCP", (byte) 0, (byte) 7, (byte) 0, (byte) 3, this::DCP);
-        instructions[220] = new Instruction("NOP", (byte) 1, (byte) 4, (byte) 3, (byte) 2, this::NOP);
-        instructions[221] = new Instruction("CMP", (byte) 1, (byte) 4, (byte) 3, (byte) 2, this::CMP);
-        instructions[222] = new Instruction("DEC", (byte) 0, (byte) 7, (byte) 3, (byte) 2, this::DEC);
-        instructions[223] = new Instruction("DCP", (byte) 0, (byte) 7, (byte) 0, (byte) 2, this::DCP);
-        instructions[224] = new Instruction("CPX", (byte) 0, (byte) 2, (byte) 2, (byte) 5, this::CPX);
-        instructions[225] = new Instruction("SBC", (byte) 0, (byte) 6, (byte) 2, (byte) 7, this::SBC);
-        instructions[226] = new Instruction("NOP", (byte) 0, (byte) 2, (byte) 0, (byte) 5, this::NOP);
-        instructions[227] = new Instruction("ISC", (byte) 0, (byte) 8, (byte) 0, (byte) 7, this::ISC);
-        instructions[228] = new Instruction("CPX", (byte) 0, (byte) 3, (byte) 2, (byte) 11, this::CPX);
-        instructions[229] = new Instruction("SBC", (byte) 0, (byte) 3, (byte) 2, (byte) 11, this::SBC);
-        instructions[230] = new Instruction("INC", (byte) 0, (byte) 5, (byte) 2, (byte) 11, this::INC);
-        instructions[231] = new Instruction("ISC", (byte) 0, (byte) 5, (byte) 0, (byte) 11, this::ISC);
-        instructions[232] = new Instruction("INX", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::INX);
-        instructions[233] = new Instruction("SBC", (byte) 0, (byte) 2, (byte) 2, (byte) 5, this::SBC);
-        instructions[234] = new Instruction("NOP", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::NOP);
-        instructions[235] = new Instruction("SBC", (byte) 0, (byte) 2, (byte) 0, (byte) 5, this::SBC);
-        instructions[236] = new Instruction("CPX", (byte) 0, (byte) 4, (byte) 3, (byte) 1, this::CPX);
-        instructions[237] = new Instruction("SBC", (byte) 0, (byte) 4, (byte) 3, (byte) 1, this::SBC);
-        instructions[238] = new Instruction("INC", (byte) 0, (byte) 6, (byte) 3, (byte) 1, this::INC);
-        instructions[239] = new Instruction("ISC", (byte) 0, (byte) 6, (byte) 0, (byte) 1, this::ISC);
-        instructions[240] = new Instruction("BEQ", (byte) 1, (byte) 2, (byte) 2, (byte) 10, this::BEQ);
-        instructions[241] = new Instruction("SBC", (byte) 1, (byte) 5, (byte) 2, (byte) 9, this::SBC);
-        instructions[242] = new Instruction("KIL", (byte) 0, (byte) 2, (byte) 0, (byte) 6, this::KIL);
-        instructions[243] = new Instruction("ISC", (byte) 0, (byte) 8, (byte) 0, (byte) 9, this::ISC);
-        instructions[244] = new Instruction("NOP", (byte) 0, (byte) 4, (byte) 2, (byte) 12, this::NOP);
-        instructions[245] = new Instruction("SBC", (byte) 0, (byte) 4, (byte) 2, (byte) 12, this::SBC);
-        instructions[246] = new Instruction("INC", (byte) 0, (byte) 6, (byte) 2, (byte) 12, this::INC);
-        instructions[247] = new Instruction("ISC", (byte) 0, (byte) 6, (byte) 0, (byte) 12, this::ISC);
-        instructions[248] = new Instruction("SED", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::SED);
-        instructions[249] = new Instruction("SBC", (byte) 1, (byte) 4, (byte) 3, (byte) 3, this::SBC);
-        instructions[250] = new Instruction("NOP", (byte) 0, (byte) 2, (byte) 1, (byte) 6, this::NOP);
-        instructions[251] = new Instruction("ISC", (byte) 0, (byte) 7, (byte) 0, (byte) 3, this::ISC);
-        instructions[252] = new Instruction("NOP", (byte) 1, (byte) 4, (byte) 3, (byte) 2, this::NOP);
-        instructions[253] = new Instruction("SBC", (byte) 1, (byte) 4, (byte) 3, (byte) 2, this::SBC);
-        instructions[254] = new Instruction("INC", (byte) 0, (byte) 7, (byte) 3, (byte) 2, this::INC);
-        instructions[255] = new Instruction("ISC", (byte) 0, (byte) 7, (byte) 0, (byte) 2, this::ISC);
+    Cpu(Ram *pRam) : ram(pRam) {
+        interrupt = interruptNone;
+        stall = 0;
 
     }
 
-    int step() {
-        // Step 1, we may be waiting some cycles for some reason
-        // cpu stalled
-
-        // Step 2, we should handle interupts
-        // something may have set an interupt, we should handle
-
-        // Step 3, decode opcode by looking at the current program counter
-        byte opcode = ram.read(PC);
-        Instruction inst = instructions[opcode];
-        mode = inst.addressingMode;
-
-        PC += inst.size;
-        /*
-        cycles += inst.instructionCycles;
-        if pageCrossed {
-            cycles += inst.instructionPageCycles;
-        }
-        */
-
-        instructions[opcode].inst.execute();
+    short Read(short address) {
         return 0;
     }
 
-    interface Inst {
-            void execute();
+    void Write(short address, char byte) {
     }
 
-    static class Instruction {
-        Instruction(String name, byte pageCycles, byte cycles, byte size, byte addressingMode, Inst inst) {
-            this.name = name;
-            this.pageCycles = pageCycles;
-            this.cycles = cycles;
-            this.size = size;
-            this.addressingMode = addressingMode;
-            this.inst = inst;
+
+//        table     [256]func(*stepInfo)
+
+//    Cpu(Console &console) {
+//        cpu = CPU{Memory: NewCPUMemory(console)}
+//        cpu.createTable()
+//        cpu.Reset()
+//        return &cpu
+//    }
+
+// createTable builds a function table for each instruction
+//    void createTable() {
+//        c.table = [256]func(*stepInfo){
+//            c.brk, c.ora, c.kil, c.slo, c.nop, c.ora, c.asl, c.slo,
+//                    c.php, c.ora, c.asl, c.anc, c.nop, c.ora, c.asl, c.slo,
+//                    c.bpl, c.ora, c.kil, c.slo, c.nop, c.ora, c.asl, c.slo,
+//                    c.clc, c.ora, c.nop, c.slo, c.nop, c.ora, c.asl, c.slo,
+//                    c.jsr, c.and, c.kil, c.rla, c.bit, c.and, c.rol, c.rla,
+//                    c.plp, c.and, c.rol, c.anc, c.bit, c.and, c.rol, c.rla,
+//                    c.bmi, c.and, c.kil, c.rla, c.nop, c.and, c.rol, c.rla,
+//                    c.sec, c.and, c.nop, c.rla, c.nop, c.and, c.rol, c.rla,
+//                    c.rti, c.eor, c.kil, c.sre, c.nop, c.eor, c.lsr, c.sre,
+//                    c.pha, c.eor, c.lsr, c.alr, c.jmp, c.eor, c.lsr, c.sre,
+//                    c.bvc, c.eor, c.kil, c.sre, c.nop, c.eor, c.lsr, c.sre,
+//                    c.cli, c.eor, c.nop, c.sre, c.nop, c.eor, c.lsr, c.sre,
+//                    c.rts, c.adc, c.kil, c.rra, c.nop, c.adc, c.ror, c.rra,
+//                    c.pla, c.adc, c.ror, c.arr, c.jmp, c.adc, c.ror, c.rra,
+//                    c.bvs, c.adc, c.kil, c.rra, c.nop, c.adc, c.ror, c.rra,
+//                    c.sei, c.adc, c.nop, c.rra, c.nop, c.adc, c.ror, c.rra,
+//                    c.nop, c.sta, c.nop, c.sax, c.sty, c.sta, c.stx, c.sax,
+//                    c.dey, c.nop, c.txa, c.xaa, c.sty, c.sta, c.stx, c.sax,
+//                    c.bcc, c.sta, c.kil, c.ahx, c.sty, c.sta, c.stx, c.sax,
+//                    c.tya, c.sta, c.txs, c.tas, c.shy, c.sta, c.shx, c.ahx,
+//                    c.ldy, c.lda, c.ldx, c.lax, c.ldy, c.lda, c.ldx, c.lax,
+//                    c.tay, c.lda, c.tax, c.lax, c.ldy, c.lda, c.ldx, c.lax,
+//                    c.bcs, c.lda, c.kil, c.lax, c.ldy, c.lda, c.ldx, c.lax,
+//                    c.clv, c.lda, c.tsx, c.las, c.ldy, c.lda, c.ldx, c.lax,
+//                    c.cpy, c.cmp, c.nop, c.dcp, c.cpy, c.cmp, c.dec, c.dcp,
+//                    c.iny, c.cmp, c.dex, c.axs, c.cpy, c.cmp, c.dec, c.dcp,
+//                    c.bne, c.cmp, c.kil, c.dcp, c.nop, c.cmp, c.dec, c.dcp,
+//                    c.cld, c.cmp, c.nop, c.dcp, c.nop, c.cmp, c.dec, c.dcp,
+//                    c.cpx, c.sbc, c.nop, c.isc, c.cpx, c.sbc, c.inc, c.isc,
+//                    c.inx, c.sbc, c.nop, c.sbc, c.cpx, c.sbc, c.inc, c.isc,
+//                    c.beq, c.sbc, c.kil, c.isc, c.nop, c.sbc, c.inc, c.isc,
+//                    c.sed, c.sbc, c.nop, c.isc, c.nop, c.sbc, c.inc, c.isc,
+//        }
+//    }
+
+//    func (cpu *CPU) Save(encoder *gob.Encoder) error {
+//        encoder.Encode(cpu.Cycles)
+//        encoder.Encode(cpu.PC)
+//        encoder.Encode(cpu.SP)
+//        encoder.Encode(cpu.A)
+//        encoder.Encode(cpu.X)
+//        encoder.Encode(cpu.Y)
+//        encoder.Encode(cpu.C)
+//        encoder.Encode(cpu.Z)
+//        encoder.Encode(cpu.I)
+//        encoder.Encode(cpu.D)
+//        encoder.Encode(cpu.B)
+//        encoder.Encode(cpu.U)
+//        encoder.Encode(cpu.V)
+//        encoder.Encode(cpu.N)
+//        encoder.Encode(cpu.interrupt)
+//        encoder.Encode(cpu.stall)
+//        return nil
+//    }
+//
+//    func (cpu *CPU) Load(decoder *gob.Decoder) error {
+//        decoder.Decode(&cpu.Cycles)
+//        decoder.Decode(&cpu.PC)
+//        decoder.Decode(&cpu.SP)
+//        decoder.Decode(&cpu.A)
+//        decoder.Decode(&cpu.X)
+//        decoder.Decode(&cpu.Y)
+//        decoder.Decode(&cpu.C)
+//        decoder.Decode(&cpu.Z)
+//        decoder.Decode(&cpu.I)
+//        decoder.Decode(&cpu.D)
+//        decoder.Decode(&cpu.B)
+//        decoder.Decode(&cpu.U)
+//        decoder.Decode(&cpu.V)
+//        decoder.Decode(&cpu.N)
+//        decoder.Decode(&cpu.interrupt)
+//        decoder.Decode(&cpu.stall)
+//        return nil
+//    }
+
+// Reset resets the CPU to its initial powerup state
+    void Reset() {
+        PC = Read16(0xFFFC);
+        SP = 0xFD;
+        SetFlags(0x24);
+    }
+
+
+// Step executes a single CPU instruction
+    int Step() {
+        if (stall > 0) {
+            stall--;
+            return 1;
         }
 
-        // the opcode name
-        String name;
+//        cycles = Cycles;
 
-        // the number of cycles this instruction takes when a page is crossed
-        byte pageCycles;
+        switch (interrupt) {
+            case interruptNMI:
+                nmi();
+            case interruptIRQ:
+                irq();
+        }
+        interrupt = interruptNone;
 
-        // the number of cycles this instruction takes
-        byte cycles;
+        auto opcode = Read(PC);
+        auto mode = instructionModes[opcode];
 
-        // the size of the instruction in bytes
-        byte size;
+        short address;
+        bool pageCrossed;
+        short offset = 0;
+        switch (mode) {
+            case modeAbsolute:
+                address = Read16(PC + 1);
+                break;
+            case modeAbsoluteX:
+                address = Read16(PC + 1) + short(X);
+                pageCrossed = pagesDiffer(address - short(X), address);
+                break;
+            case modeAbsoluteY:
+                address = Read16(PC + 1) + short(Y);
+                pageCrossed = pagesDiffer(address - short(Y), address);
+                break;
+            case modeAccumulator:
+                address = 0;
+                break;
+            case modeImmediate:
+                address = PC + 1;
+                break;
+            case modeImplied:
+                address = 0;
+                break;
+            case modeIndexedIndirect:
+                address = read16bug(short(Read(PC + 1) + X));
+                break;
+            case modeIndirect:
+                address = read16bug(Read16(PC + 1));
+                break;
+            case modeIndirectIndexed:
+                address = read16bug(short(Read(PC + 1))) + short(Y);
+                pageCrossed = pagesDiffer(address - short(Y), address);
+                break;
+            case modeRelative:
+                offset = short(Read(PC + 1));
+                if (offset < 0x80) {
+                    address = PC + 2 + offset;
+                } else {
+                    address = PC + 2 + offset - 0x100;
+                }
+                break;
+            case modeZeroPage:
+                address = short(Read(PC + 1));
+                break;
+            case modeZeroPageX:
+                address = short(Read(PC + 1) + X) & 0xff;
+                break;
+            case modeZeroPageY:
+                address = short(Read(PC + 1) + Y) & 0xff;
+                break;
+        }
 
-        // the addressing mode for each instruction
-        byte addressingMode;
+        PC += short(instructionSizes[opcode]);
+        Cycles += long(instructionCycles[opcode]);
+        if (pageCrossed) {
+            Cycles += long(instructionPageCycles[opcode]);
+        }
+        auto info = stepInfo{address, PC, mode};
+//        table[opcode](info);
 
-        // the function to execute
-        Inst inst;
-
-
+//        return int(Cycles - cycles);
+        return Cycles;
     }
 
-    // reset to power up state
-    void reset() {
-    }
+// PrintInstruction prints the current CPU state
+//    void PrintInstruction() {
+//        opcode = Read(PC);
+//        bytes = instructionSizes[opcode];
+//        name = instructionNames[opcode];
+//        w0 = fmt.Sprintf("%02X", cpu.Read(cpu.PC+0));
+//        w1 = fmt.Sprintf("%02X", cpu.Read(cpu.PC+1));
+//        w2 = fmt.Sprintf("%02X", cpu.Read(cpu.PC+2));
+//        if bytes < 2 {
+//            w1 = "  ";
+//        }
+//        if bytes < 3 {
+//            w2 = "  ";
+//        }
+//        fmt.Printf(
+//                "%4X  %s %s %s  %s %28s"+
+//                "A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3d\n",
+//                cpu.PC, w0, w1, w2, name, "",
+//                cpu.A, cpu.X, cpu.Y, cpu.Flags(), cpu.SP, (cpu.Cycles*3)%341);
+//    }
 
-    // print current cpu stat
-    void printInstruction() {
-
-    }
-
-    // are 2 addresses on the same page
-    // TODO what is a page?
-    boolean pagesDiffer(short a, short b) {
+// pagesDiffer returns true if the two addresses reference different pages
+    bool pagesDiffer(short a, short b) {
         return (a & 0xFF00) != (b & 0xFF00);
     }
 
-    // adds extra cpu cycle for branching, and another if pages differ
-    void addBranchCycles() {
-        cycles++;
-        if (pagesDiffer(PC, address)) {
-            cycles++;
+
+// stepInfo contains information that the instruction functions use
+    struct stepInfo {
+        short address;
+        short pc;
+        char mode;
+    };
+
+    // addBranchCycles adds a cycle for taking a branch and adds another cycle
+// if the branch jumps to a new page
+    void addBranchCycles(stepInfo info) {
+        Cycles++;
+        if (pagesDiffer(info.pc, info.address)) {
+            Cycles++;
         }
     }
 
-    void compare(byte a, byte b) {
-        setZN((byte) (a - b));
-        C = (byte) (a >= b ? 1 : 0);
+    void compare(char a, char b) {
+        setZN(a - b);
+        if (a >= b) {
+            C = 1;
+        } else {
+            C = 0;
+        }
     }
 
-    // reads 2 bytes at address
-    short read16(short a) {
-        short low = ram.read(address);
-        short hi = ram.read((short) (address + 1));
-        return (short) ((hi << 8) | low);
+// Read16 reads two bytes using Read to return a double-word value
+    short Read16(short address) {
+        char lo = short(Read(address));
+        char hi = short(Read(address + 1));
+        return hi << 8 | lo;
     }
 
-    // 6502 bug that caused the low byte to wrap without incrementing high byte
+// read16bug emulates a 6502 bug that caused the low byte to wrap without
+// incrementing the high byte
     short read16bug(short address) {
-        short low = ram.read(address);
-        short hi = ram.read((short) ((address & 0xFF00) | ((byte) address + 1)));
-        return (short) ((hi << 8) | low);
-
+        short a = address;
+        short b = (a & 0xFF00) | short(char(a) + 1);
+        char lo = Read(a);
+        char hi = Read(b);
+        return short(hi) << 8 | short(lo);
     }
 
-    // push a byte onto stack
-    void push(byte b) {
-        ram.write((short) (0x100 | this.SP), b);
-        this.SP--;
+// push pushes a byte onto the stack
+    void push(char value) {
+        Write(0x100 | short(SP), value);
+        SP--;
     }
 
-    // pops a byte from the stack
-    byte pop() {
-        this.SP++;
-        return ram.read((short) (0x100 | this.SP));
+// pull pops a byte from the stack
+    char pull() {
+        SP++;
+        return (Read(0x100 | short(SP)));
     }
 
-    // push 2 bytes on stack
-    void push16(short a) {
-        push((byte) ((a >> 8) & 0xFF));
-        push((byte) (a & 0xFF));
+// push16 pushes two bytes onto the stack
+    void push16(short value) {
+        char hi = char(value >> 8);
+        char lo = char(value & 0xFF);
+        push(hi);
+        push(lo);
     }
 
-    // pop 2 bytes from stack
-    short pop16() {
-        short low = pop();
-        short hi = pop();
-        return (short) ((hi << 8) | low);
+// pull16 pops two bytes from the stack
+    short pull16() {
+        short lo = short(pull());
+        short hi = short(pull());
+        return hi << 8 | lo;
     }
 
-    // returns flags of processor status register
-    byte flags() {
-        byte flags = 0;
-        flags |= C;
+// Flags returns the processor status flags
+    char Flags() {
+        char flags = 0;
+        flags |= C << 0;
         flags |= Z << 1;
         flags |= I << 2;
         flags |= D << 3;
@@ -487,345 +478,542 @@ private void createTable() {
         return flags;
     }
 
-    // set the flags from a byte
-    void setFlags(byte b) {
-
-
+// SetFlags sets the processor status flags
+    void SetFlags(char flags) {
+        C = (flags >> 0) & 1;
+        Z = (flags >> 1) & 1;
+        I = (flags >> 2) & 1;
+        D = (flags >> 3) & 1;
+        B = (flags >> 4) & 1;
+        U = (flags >> 5) & 1;
+        V = (flags >> 6) & 1;
+        N = (flags >> 7) & 1;
     }
 
-    // set the zero flag
-    void setZ(byte b) {
-
+// setZ sets the zero flag if the argument is zero
+    void setZ(char value) {
+        if (value == 0) {
+            Z = 1;
+        } else {
+            Z = 0;
+        }
     }
 
-    // set the negative flag
-    void setN(byte b) {
-
+// setN sets the negative flag if the argument is negative (high bit is set)
+    void setN(char value) {
+        if (value & 0x80 != 0) {
+            N = 1;
+        } else {
+            N = 0;
+        }
     }
 
-    // set zero and negative flag
-    void setZN(byte b) {
-
+// setZN sets the zero flag and the negative flag
+    void setZN(char value) {
+        setZ(value);
+        setN(value);
     }
 
-    // triggers the non maskable interrupt on next cpu interation
+// triggerNMI causes a non-maskable interrupt to occur on the next cycle
     void triggerNMI() {
-
+        interrupt = interruptNMI;
     }
 
-    // triggers the IRQ interupt on next cpu iteration
+// triggerIRQ causes an IRQ interrupt to occur on the next cycle
     void triggerIRQ() {
-
-    }
-
-    // NMI handler
-    void NMI() {
-
-    }
-
-    // IRQ handler
-    void IRQ() {
-    }
-
-    // INSTRUCTIONS
-
-    // ADD with carry
-    void ADC() {
-    }
-
-    // logical AND
-    void AND() {
+        if (I == 0) {
+            interrupt = interruptIRQ;
+        }
+    }
+
+// NMI - Non-Maskable Interrupt
+    void nmi() {
+        push16(PC);
+        php();
+        PC = Read16(0xFFFA);
+        I = 1;
+        Cycles += 7;
+    }
+
+// IRQ - IRQ Interrupt
+    void irq() {
+        push16(PC);
+        php();
+        PC = Read16(0xFFFE);
+        I = 1;
+        Cycles += 7;
+    }
+
+// ADC - Add with Carry
+    void adc(stepInfo info) {
+        auto a = A;
+        auto b = Read(info.address);
+        auto c = C;
+        A = a + b + c;
+        setZN(A);
+        if (int(a) + int(b) + int(c) > 0xFF) {
+            C = 1;
+        } else {
+            C = 0;
+        }
+        if (((a ^ b) & 0x80 == 0) && ((a ^ A) & 0x80 != 0)) {
+            V = 1;
+        } else {
+            V = 0;
+        }
+    }
+
+// AND - Logical AND
+    void AND(stepInfo info) {
+        A = A & Read(info.address);
+        setZN(A);
+    }
+
+// ASL - Arithmetic Shift Left
+    void asl(stepInfo info) {
+        if (info.mode == modeAccumulator) {
+            C = (A >> 7) & 1;
+            A <<= 1;
+            setZN(A);
+        } else {
+            auto value = Read(info.address);
+            C = (value >> 7) & 1;
+            value <<= 1;
+            Write(info.address, value);
+            setZN(value);
+        }
+    }
+
+// BCC - Branch if Carry Clear
+    void bcc(stepInfo info) {
+        if (C == 0) {
+            PC = info.address;
+            addBranchCycles(info);
+        }
+    }
+
+// BCS - Branch if Carry Set
+    void bcs(stepInfo info) {
+        if (C != 0) {
+            PC = info.address;
+            addBranchCycles(info);
+        }
+    }
+
+// BEQ - Branch if Equal
+    void beq(stepInfo info) {
+        if (Z != 0) {
+            auto PC = info.address;
+            auto addBranchCycles(info);
+        }
+    }
+
+// BIT - Bit Test
+    void bit(stepInfo info) {
+        auto value = Read(info.address);
+        V = (value >> 6) & 1;
+        setZ(value & A);
+        setN(value);
     }
 
-    // arithmetic shift left
-    void ASL() {
+// BMI - Branch if Minus
+    void bmi(stepInfo info) {
+        if (N != 0) {
+            PC = info.address;
+            addBranchCycles(info);
+        }
     }
 
-    // branch if carry is clear
-    void BCC() {
+// BNE - Branch if Not Equal
+    void bne(stepInfo info) {
+        if (Z == 0) {
+            PC = info.address;
+            addBranchCycles(info);
+        }
     }
 
-    // branch if carry is set
-    void BCS() {
+// BPL - Branch if Positive
+    void bpl(stepInfo info) {
+        if (N == 0) {
+            PC = info.address;
+            addBranchCycles(info);
+        }
     }
 
-    // branch if equal
-    void BEQ() {
+// BRK - Force Interrupt
+    void brk(stepInfo info) {
+        push16(PC);
+        php(info);
+        sei(info);
+        PC = Read16(0xFFFE);
     }
 
-    // bit test
-    void BIT() {
+// BVC - Branch if Overflow Clear
+    void bvc(stepInfo info) {
+        if (V == 0) {
+            PC = info.address;
+            addBranchCycles(info);
+        }
     }
 
-    // branch if minus
-    void BMI() {
+// BVS - Branch if Overflow Set
+    void bvs(stepInfo info) {
+        if (V != 0) {
+            PC = info.address;
+            addBranchCycles(info);
+        }
     }
 
-    // branch if not equal
-    void BNE() {
+// CLC - Clear Carry Flag
+    void clc(stepInfo info) {
+        C = 0;
     }
 
-    // branch if positive
-    void BPL() {
+// CLD - Clear Decimal Mode
+    void cld(stepInfo info) {
+        D = 0;
     }
 
-    // force interrupt
-    void BRK() {
+// CLI - Clear Interrupt Disable
+    void cli(stepInfo info) {
+        I = 0;
     }
 
-    // branch if overflow clear
-    void BVC() {
+// CLV - Clear Overflow Flag
+    void clv(stepInfo info) {
+        V = 0;
     }
 
-    // branch if overflow set
-    void BVS() {
+// CMP - Compare
+    void cmp(stepInfo info) {
+        auto value = Read(info.address);
+        compare(A, value);
     }
 
-    // clear carry flag
-    void CLC() {
+// CPX - Compare X Register
+    void cpx(stepInfo info) {
+        auto value = Read(info.address);
+        compare(X, value);
     }
 
-    // clear decimal mode
-    void CLD() {
+// CPY - Compare Y Register
+    void cpy(stepInfo info) {
+        auto value = Read(info.address);
+        compare(Y, value);
     }
 
-    // clear interrupt disable
-    void CLI() {
+// DEC - Decrement Memory
+    void dec(stepInfo info) {
+        auto value = Read(info.address) - 1;
+        Write(info.address, value);
+        setZN(value);
     }
 
-    // clear overflow flag
-    void CLV() {
+// DEX - Decrement X Register
+    void dex(stepInfo info) {
+        X--;
+        setZN(X);
     }
 
-    // compare
-    void CMP() {
+// DEY - Decrement Y Register
+    void dey(stepInfo info) {
+        Y--;
+        setZN(Y);
     }
 
-    // compare x register
-    void CPX() {
+// EOR - Exclusive OR
+    void eor(stepInfo info) {
+        A = A ^ Read(info.address);
+        setZN(A);
     }
 
-    // compare y register
-    void CPY() {
+// INC - Increment Memory
+    void inc(stepInfo info) {
+        auto value = Read(info.address) + 1;
+        Write(info.address, value);
+        setZN(value);
     }
 
-    // decrement memory
-    void DEC() {
+// INX - Increment X Register
+    void inx(stepInfo info) {
+        X++;
+        setZN(X);
     }
 
-    // decrement x register
-    void DEX() {
+// INY - Increment Y Register
+    void iny(stepInfo info) {
+        Y++;
+        setZN(Y);
     }
 
-    // decrement y register
-    void DEY() {
+// JMP - Jump
+    void jmp(stepInfo info) {
+        PC = info.address;
     }
 
-    // exclusive or
-    void EOR() {
+// JSR - Jump to Subroutine
+    void jsr(stepInfo info) {
+        push16(PC - 1);
+        PC = info.address;
     }
 
-    // increment memory
-    void INC() {
+// LDA - Load Accumulator
+    void lda(stepInfo info) {
+        A = Read(info.address);
+        setZN(A);
     }
 
-    // increment x register
-    void INX() {
+// LDX - Load X Register
+    void ldx(stepInfo info) {
+        X = Read(info.address);
+        setZN(X);
     }
 
-    // increment y register
-    void INY() {
+// LDY - Load Y Register
+    void ldy(stepInfo info) {
+        Y = Read(info.address);
+        setZN(Y);
     }
 
-    // jump
-    void JMP() {
+// LSR - Logical Shift Right
+    void lsr(stepInfo info) {
+        if (info.mode == modeAccumulator) {
+            C = A & 1;
+            A >>= 1;
+            setZN(A);
+        } else {
+            auto value = Read(info.address);
+            C = value & 1;
+            value >>= 1;
+            Write(info.address, value);
+            setZN(value);
+        }
     }
 
-    // jump to subroutine
-    void JSR() {
+// NOP - No Operation
+    void nop(stepInfo info) {
     }
 
-    // load accumulator
-    void LDA() {
+// ORA - Logical Inclusive OR
+    void ora(stepInfo info) {
+        A = A | Read(info.address);
+        setZN(A);
     }
 
-    // load x register
-    void LDX() {
+// PHA - Push Accumulator
+    void pha(stepInfo info) {
+        push(A);
     }
 
-    // load y register
-    void LDY() {
+// PHP - Push Processor Status
+    void php(stepInfo info) {
+        push(Flags() | 0x10);
     }
 
-    // logical shift right
-    void LSR() {
+    void php() {
+        push(Flags() | 0x10);
     }
 
-    // no operation
-    void NOP() {
+// PLA - Pull Accumulator
+    void pla(stepInfo info) {
+        A = pull();
+        setZN(A);
     }
 
-    // logical includive or
-    void ORA() {
+// PLP - Pull Processor Status
+    void plp(stepInfo info) {
+        SetFlags(pull() & 0xEF | 0x20);
     }
 
-    // push accumulator
-    void PHA() {
+// ROL - Rotate Left
+    void rol(stepInfo info) {
+        if (info.mode == modeAccumulator) {
+            auto c = C;
+            C = (A >> 7) & 1;
+            A = (A << 1) | c;
+            setZN(A);
+        } else {
+            auto c = C;
+            auto value = Read(info.address);
+            C = (value >> 7) & 1;
+            value = (value << 1) | c;
+            Write(info.address, value);
+            setZN(value);
+        }
     }
 
-    // push processor status
-    void PHP() {
+// ROR - Rotate Right
+    void ror(stepInfo info) {
+        if (info.mode == modeAccumulator) {
+            auto c = C;
+            C = A & 1;
+            A = (A >> 1) | (c << 7);
+            setZN(A);
+        } else {
+            auto c = C;
+            auto value = Read(info.address);
+            C = value & 1;
+            value = (value >> 1) | (c << 7);
+            Write(info.address, value);
+            setZN(value);
+        }
     }
 
-    // pull accumulator
-    void PLA() {
+// RTI - Return from Interrupt
+    void rti(stepInfo info) {
+        SetFlags(pull() & 0xEF | 0x20);
+        PC = pull16();
     }
 
-    // pull processor status
-    void PLP() {
+// RTS - Return from Subroutine
+    void rts(stepInfo info) {
+        PC = pull16() + 1;
     }
 
-    // rotate left
-    void ROL() {
+// SBC - Subtract with Carry
+    void sbc(stepInfo info) {
+        auto a = A;
+        auto b = Read(info.address);
+        auto c = C;
+        A = a - b - (1 - c);
+        setZN(A);
+        if (int(a) - int(b) - int(1 - c) >= 0) {
+            C = 1;
+        } else {
+            C = 0;
+        }
+        if ((a ^ b) & 0x80 != 0 && (a ^ A) & 0x80 != 0) {
+            V = 1;
+        } else {
+            V = 0;
+        }
     }
 
-    // rotate right
-    void ROR() {
+// SEC - Set Carry Flag
+    void sec(stepInfo info) {
+        C = 1;
     }
 
-    // return from interrupt
-    void RTI() {
+// SED - Set Decimal Flag
+    void sed(stepInfo info) {
+        D = 1;
     }
 
-    // return from subroutine
-    void RTS() {
+// SEI - Set Interrupt Disable
+    void sei(stepInfo info) {
+        I = 1;
     }
 
-    // subtract with carry
-    void SBC() {
+// STA - Store Accumulator
+    void sta(stepInfo info) {
+        Write(info.address, A);
     }
 
-    // set carry flag
-    void SEC() {
+// STX - Store X Register
+    void stx(stepInfo info) {
+        Write(info.address, X);
     }
 
-    // set decimal flag
-    void SED() {
+// STY - Store Y Register
+    void sty(stepInfo info) {
+        Write(info.address, Y);
     }
 
-    // set interupt disable
-    void SEI() {
+// TAX - Transfer Accumulator to X
+    void tax(stepInfo info) {
+        X = A;
+        setZN(X);
     }
 
-    // store accumulator
-    void STA() {
+// TAY - Transfer Accumulator to Y
+    void tay(stepInfo info) {
+        Y = A;
+        setZN(Y);
     }
 
-    // store x register
-    void STX() {
+// TSX - Transfer Stack Pointer to X
+    void tsx(stepInfo info) {
+        X = SP;
+        setZN(X);
     }
 
-    // store y register
-    void STY() {
+// TXA - Transfer X to Accumulator
+    void txa(stepInfo info) {
+        A = X;
+        setZN(A);
     }
 
-    // transfer accumulator to x
-    void TAX() {
+// TXS - Transfer X to Stack Pointer
+    void txs(stepInfo info) {
+        SP = X;
     }
 
-    // transfer accumulator to y
-    void TAY() {
+// TYA - Transfer Y to Accumulator
+    void tya(stepInfo info) {
+        A = Y;
+        setZN(A);
     }
 
-    // transfer stack pointer to x
-    void TSX() {
-    }
+// illegal opcodes below
 
-    // transfer x to accumulator
-    void TXA() {
+    void ahx(stepInfo info) {
     }
 
-    // transfer x to stack pointer
-    void TXS() {
+    void alr(stepInfo info) {
     }
 
-    // transfer y to stack pointer
-    void TYA() {
+    void anc(stepInfo info) {
     }
 
-    void ARR() {
-        // noop
+    void arr(stepInfo info) {
     }
 
-    void AHX() {
-        // noop
+    void axs(stepInfo info) {
     }
 
-    void ALR() {
-        // noop
+    void dcp(stepInfo info) {
     }
 
-    void ANC() {
-        // noop
+    void isc(stepInfo info) {
     }
 
-    void AXS() {
-        // noop
+    void kil(stepInfo info) {
     }
 
-    void DCP() {
-        // noop
+    void las(stepInfo info) {
     }
 
-    void ISC() {
-        // noop
+    void lax(stepInfo info) {
     }
 
-    void KIL() {
-        // noop
+    void rla(stepInfo info) {
     }
 
-    void LAS() {
-        // noop
+    void rra(stepInfo info) {
     }
 
-    void LAX() {
-        // noop
+    void sax(stepInfo info) {
     }
 
-    void RLA() {
-        // noop
+    void shx(stepInfo info) {
     }
 
-    void RRA() {
-        // noop
+    void shy(stepInfo info) {
     }
 
-    void SAX() {
-        // noop
+    void slo(stepInfo info) {
     }
 
-    void TAS() {
-        // noop
+    void sre(stepInfo info) {
     }
 
-    void SHX() {
-        // noop
+    void tas(stepInfo info) {
     }
 
-    void SHY() {
-        // noop
+    void xaa(stepInfo info) {
     }
 
-    void SLO() {
-        // noop
-    }
 
-    void SRE() {
-        // noop
-    }
+};
 
-    void XAA() {
-        // noop
-    }
-}
+#endif  // CPPTEST_CPU_H
