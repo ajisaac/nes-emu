@@ -12,16 +12,16 @@ class Ram {
 
 public:
 
-    PPU* ppu;
-    APU* apu;
-    Controller* controller1;
-    Controller* controller2;
-    Mapper* mapper;
+    PPU *ppu;
+    APU *apu;
+    Controller *controller1;
+    Controller *controller2;
+    Mapper *mapper;
 
     char ram[2048] = {0};
 
 
-    Ram(PPU* ppu, APU* apu, Controller* controller1, Controller* controller2, Mapper* mapper) {
+    Ram(PPU *ppu, APU *apu, Controller *controller1, Controller *controller2, Mapper *mapper) {
         this->ppu = ppu;
         this->apu = apu;
         this->controller1 = controller1;
@@ -30,28 +30,28 @@ public:
     }
 
     char Read(short address) {
-        if( address < 0x2000){
-            return ram[address%0x0800];
-        } else if (address < 0x4000){
-            return ppu->readRegister(0x2000 + address%8);
-        } else if (address == 0x4014){
+        if (address < 0x2000) {
+            return ram[address % 0x0800];
+        } else if (address < 0x4000) {
+            return ppu->readRegister(0x2000 + address % 8);
+        } else if (address == 0x4014) {
 
             return ppu->readRegister(address);
-        } else if (address == 0x4015){
+        } else if (address == 0x4015) {
 
             return apu->readRegister(address);
-        } else if (address == 0x4016){
+        } else if (address == 0x4016) {
 
             return controller1->Read();
-        } else if (address == 0x4017){
+        } else if (address == 0x4017) {
 
             return controller2->Read();
-        } else if (address < 0x6000){
+        } else if (address < 0x6000) {
             // TODO: I/O registers
             return 0;
-        } else if (address >= 0x6000){
+        } else if (address >= 0x6000) {
             return mapper->Read(address);
-        }else {
+        } else {
             std::cout << "unhandled cpu memory read at address: " << address << std::endl;
         }
         return 0;
@@ -84,7 +84,7 @@ public:
 
 // PPU Memory Map
 
-    char ReadPpuMemory(short address)  {
+    char ReadPpuMemory(short address) {
         auto address_div = address % 0x4000;
         if (address_div < 0x2000) {
             return mapper->Read(address_div);
@@ -125,18 +125,18 @@ public:
     };
 
     char MirrorLookup[5][4] = {
-        {0, 0, 1, 1},
-        {0, 1, 0, 1},
-        {0, 0, 0, 0},
-        {1, 1, 1, 1},
-        {0, 1, 2, 3},
+            {0, 0, 1, 1},
+            {0, 1, 0, 1},
+            {0, 0, 0, 0},
+            {1, 1, 1, 1},
+            {0, 1, 2, 3},
     };
 
     short MirrorAddress(char mode, short address) {
         auto address_div = (address - 0x2000) % 0x1000;
         auto table = address_div / 0x0400;
         auto offset = address_div % 0x0400;
-        return 0x2000 + MirrorLookup[mode][table]*0x0400 + offset;
+        return 0x2000 + MirrorLookup[mode][table] * 0x0400 + offset;
     }
 
 };
