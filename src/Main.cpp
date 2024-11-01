@@ -14,7 +14,7 @@ int main() {
 //    console.run();
 
     INes ines{};
-    Cartridge cartridge = ines.loadCartridge("/Users/aaron/Code/nes-emu/data/Nintendo/2-in-1 Super Mario Bros - Duck Hunt.nes");
+    Cartridge cartridge = ines.loadCartridge("/Users/aaron/Code/nes-emu/data/Nintendo/Castlevania.nes");
 
     Console console(cartridge);
     console.run();
