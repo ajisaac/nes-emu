@@ -24,5 +24,3 @@ set(SOURCES
 )
 add_executable(${PROJECT_NAME}_run ${SOURCES})
 
-#include_directories(src)
-#add_subdirectory(src)
