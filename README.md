@@ -1,4 +1,4 @@
-# nintendo emulator
+# Nintendo Emulator
 
 A NES emulator translated from https://github.com/fogleman/nes
 
@@ -9,7 +9,7 @@ I want to make a completely cycle accurate emulator with multithreading, a debug
 a complete set of mappers, support for game genie and other accessories, possibly 
 networked multiplayer, etc.
 
-## plan
+## Plan
 
 - [ ] Translate code from Go to C++
 - [ ] Create a UI in QT
