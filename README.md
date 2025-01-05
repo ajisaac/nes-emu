@@ -17,5 +17,9 @@ networked multiplayer, etc.
 - [ ] All mappers 
 - [ ] Multithreading
 - [ ] Cycle accurate
+- [ ] Completely accurate to the specification
 - [ ] Networked multiplayer
 - [ ] Accessories
+- [ ] Vulkan rendering
+- [ ] Cross platform
+- [ ] Performance optimized to the extreme
