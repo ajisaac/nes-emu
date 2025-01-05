@@ -5,3 +5,6 @@ CMakeFiles
 .idea
 lib
 /data/
+/cmake-build-release/build.ninja
+/cmake-build-release/cmake_install.cmake
+/cmake-build-release/CMakeCache.txt
