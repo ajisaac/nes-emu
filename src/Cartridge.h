@@ -3,8 +3,7 @@
 
 #include <vector>
 
-class Cartridge
-{
+class Cartridge {
 public:
     // prg-rom banks
     // std::vector<char> prg;
@@ -18,12 +17,23 @@ public:
     // int battery;
 
 
-    explicit Cartridge(const std::string_view path)
-    {
+    explicit Cartridge(const std::string_view path) {
         std::cout << path << std::endl;
         // open the file at path
         // throw exception if not there
-        //
+        // read bytes into memory
+        // close file
+
+        // read header into struct
+        // verify magic number
+        // determine mapper type
+        // determine mirroring type
+        // determine battery backed ram
+        // read trainer if present (unused)
+        // read prg-rom bank(s)
+        // read chr-rom bank(s)
+        // provide chr-rom/ram if not in file
+        // initialize things
     }
 };
 

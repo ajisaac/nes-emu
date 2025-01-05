@@ -3,73 +3,41 @@
 
 #include <SDL.h>
 #include "GameView.h"
-#include "MenuView.h"
 
-// the god class
-class Emulator
-{
+class Emulator {
 public:
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
     GameView* gameView = nullptr;
-    MenuView* menuView = nullptr;
-    // Audio audio
-    unsigned long long timestamp = 0;
-    std::string path;
 
-    Emulator(std::string path)
-    {
-        this->path = std::move(path);
-        if (SDL_Init(SDL_INIT_VIDEO) < 0)
-        {
+    explicit Emulator(std::string const& path): gameView{new GameView{path}} {
+        if (SDL_Init(SDL_INIT_VIDEO) < 0) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't initialize SDL: %s", SDL_GetError());
             throw std::runtime_error{SDL_GetError()};
         }
-
-        if (SDL_CreateWindowAndRenderer(800, 600, SDL_WINDOW_RESIZABLE, &this->window, &this->renderer))
-        {
+        if (SDL_CreateWindowAndRenderer(800, 600, SDL_WINDOW_RESIZABLE, &this->window, &this->renderer)) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create window and renderer: %s", SDL_GetError());
             throw std::runtime_error{SDL_GetError()};
         }
-
-        SDL_SetWindowTitle(window, this->path.c_str());
-
-        this->timestamp = SDL_GetTicks64();
-        gameView = new GameView{"", ""};
-        menuView = new MenuView{};
-
-        // todo create audio and image resources as needed
+        SDL_SetWindowTitle(window, path.c_str());
     }
 
-    ~Emulator()
-    {
-        delete gameView;
-        gameView = nullptr;
-        delete menuView;
-        menuView = nullptr;
-
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-    }
-
-    void run()
-    {
-        // main loop
+    void run() const {
         SDL_Event event;
-        while (true)
-        {
+        unsigned long long timestamp = SDL_GetTicks64();
+
+        while (true) {
             SDL_PollEvent(&event);
-            if (event.type == SDL_QUIT)
-            {
+            if (event.type == SDL_QUIT) {
                 break;
             }
 
             const unsigned long long now = SDL_GetTicks64();
-            const unsigned long long delta = now - this->timestamp;
-            this->timestamp = now;
+            const unsigned long long delta = now - timestamp;
+            timestamp = now;
 
             // run game logic, update buffer in console
+
             gameView->update(now, delta);
             std::cout << "time: " << delta << std::endl;
 
@@ -78,6 +46,15 @@ public:
             SDL_RenderClear(renderer);
             SDL_RenderPresent(renderer);
         }
+    }
+
+    ~Emulator() {
+        delete gameView;
+        gameView = nullptr;
+
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
     }
 };
 

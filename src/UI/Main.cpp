@@ -5,13 +5,11 @@
 #include "Emulator.h"
 
 // todo move this elsewhere
-std::ostream& operator<<(std::ostream& os, std::byte b)
-{
+std::ostream& operator<<(std::ostream& os, std::byte b) {
     return os << std::bitset<8>(std::to_integer<int>(b));
 }
 
-int main()
-{
+int main() {
     Emulator emulator{"/Users/aaron/Code/personal/nes-emu/data/Nintendo/Castlevania.nes"};
     emulator.run();
 

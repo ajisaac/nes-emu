@@ -4,8 +4,7 @@
 #include "../Console.h"
 
 // an abstraction over the actual console
-class GameView
-{
+class GameView {
 public:
     // Emulator * emulator;
     Console* console = nullptr;
@@ -15,24 +14,19 @@ public:
     // record boolean
     // frames [] *image frames
 
-    explicit GameView(std::string const& path): console{new Console{path}}
-    {
-    }
+    explicit GameView(std::string const& path): console{new Console{path}} {}
 
-    ~GameView()
-    {
+    ~GameView() {
         // clean up textures and such
         delete console;
     }
 
-    void load(int snapshot)
-    {
+    void load(int snapshot) {
         // load state
         // view.console.loadState(hash, snapshot);
     }
 
-    void save(int snapshot)
-    {
+    void save(int snapshot) {
         // cartridge == view.console.cartridge
         // if cartridge.battery
         //  writeSRAM(hash, snapshot, cartridge.sram
@@ -40,18 +34,12 @@ public:
         // console.saveStaet(hash, snapshot)
     }
 
-    void enter()
-    {
-    }
+    void enter() {}
 
-    void exit()
-    {
-    }
+    void exit() {}
 
-    void update(const unsigned long long t, unsigned long long dt)
-    {
-        if (dt > 1)
-        {
+    void update(const unsigned long long t, unsigned long long dt) {
+        if (dt > 1) {
             dt = 0;
         }
 
@@ -64,16 +52,11 @@ public:
         // possibly do other things
     }
 
-    void onKey()
-    {
-    }
+    void onKey() {}
 
-    void drawBuffer()
-    {
-    }
+    void drawBuffer() {}
 
-    void updateControllers()
-    {
+    void updateControllers() {
         // grab controller input from SDL or whereever
         // read keys, joysticks, etc
         // update the console state or something

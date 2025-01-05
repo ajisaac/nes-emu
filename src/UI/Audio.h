@@ -1,36 +1,30 @@
 #ifndef AUDIO_H
 #define AUDIO_H
 
-class Audio
-{
+class Audio {
 public:
     // stream audioProviderStream
     // f64 sampleRate
     // int outputChannels
     // channel channel
 
-    Audio()
-    {
+    Audio() {
         // make channel
     }
 
-    ~Audio()
-    {
+    ~Audio() {
         // destroy audio resources
     }
 
-    void start()
-    {
+    void start() {
         // set up audio streaming etc, probably do this in the constructor
     }
 
-    void stop()
-    {
+    void stop() {
         // do stuff in the destructor
     }
 
-    void callback()
-    {
+    void callback() {
         // not sure
     }
 };

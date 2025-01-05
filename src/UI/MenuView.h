@@ -2,16 +2,11 @@
 #define MENUVIEW_H
 
 // don't need this right now
-class MenuView
-{
+class MenuView {
 public:
-    MenuView()
-    {
-    }
+    MenuView() {}
 
-    ~MenuView()
-    {
-    }
+    ~MenuView() {}
 };
 
 #endif //MENUVIEW_H

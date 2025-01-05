@@ -5,8 +5,7 @@
 #include "Ram.h"
 #include "Cartridge.h"
 
-class Console
-{
+class Console {
 public:
     PPU ppu{};
     APU apu{};
@@ -20,8 +19,7 @@ public:
     explicit Console(std::string const& path)
         : cartridge{path},
           ram{&ppu, &apu, &controller1, &controller2, &mapper},
-          cpu{&ram}
-    {
+          cpu{&ram} {
         // cartridge should automatically load
     }
 

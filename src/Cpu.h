@@ -3,20 +3,17 @@
 
 #include "Ram.h"
 
-class Cpu
-{
+class Cpu {
 public:
     // interrupt types
-    enum interupt_types
-    {
+    enum interupt_types {
         interruptNone,
         interruptNMI,
         interruptIRQ
     };
 
     // addressing modes
-    enum addressing_mode
-    {
+    enum addressing_mode {
         modeAbsolute,
         modeAbsoluteX,
         modeAbsoluteY,
@@ -173,21 +170,17 @@ public:
     // interrupt type to perform
     interupt_types interrupt{interruptNone};
 
-    Cpu(Ram* pRam)
-    {
+    Cpu(Ram* pRam) {
         ram = pRam;
         interrupt = interruptNone;
         stall = 0;
     }
 
-    short Read(short address)
-    {
+    short Read(short address) {
         return 0;
     }
 
-    void Write(short address, char byte)
-    {
-    }
+    void Write(short address, char byte) {}
 
 
     //        table     [256]func(*stepInfo)
@@ -278,8 +271,7 @@ public:
     //    }
 
     // Reset resets the CPU to its initial powerup state
-    void Reset()
-    {
+    void Reset() {
         PC = Read16(0xFFFC);
         SP = 0xFD;
         SetFlags(0x24);
@@ -287,18 +279,15 @@ public:
 
 
     // Step executes a single CPU instruction
-    int Step()
-    {
-        if (stall > 0)
-        {
+    int Step() {
+        if (stall > 0) {
             stall--;
             return 1;
         }
 
         //        cycles = Cycles;
 
-        switch (interrupt)
-        {
+        switch (interrupt) {
         case interruptNMI:
             nmi();
         case interruptIRQ:
@@ -312,8 +301,7 @@ public:
         short address;
         bool pageCrossed;
         short offset = 0;
-        switch (mode)
-        {
+        switch (mode) {
         case modeAbsolute:
             address = Read16(PC + 1);
             break;
@@ -346,12 +334,10 @@ public:
             break;
         case modeRelative:
             offset = short(Read(PC + 1));
-            if (offset < 0x80)
-            {
+            if (offset < 0x80) {
                 address = PC + 2 + offset;
             }
-            else
-            {
+            else {
                 address = PC + 2 + offset - 0x100;
             }
             break;
@@ -368,8 +354,7 @@ public:
 
         PC += short(instructionSizes[opcode]);
         Cycles += long(instructionCycles[opcode]);
-        if (pageCrossed)
-        {
+        if (pageCrossed) {
             Cycles += long(instructionPageCycles[opcode]);
         }
         auto info = stepInfo{address, PC, mode};
@@ -401,15 +386,13 @@ public:
     //    }
 
     // pagesDiffer returns true if the two addresses reference different pages
-    bool pagesDiffer(short a, short b)
-    {
+    bool pagesDiffer(short a, short b) {
         return (a & 0xFF00) != (b & 0xFF00);
     }
 
 
     // stepInfo contains information that the instruction functions use
-    struct stepInfo
-    {
+    struct stepInfo {
         short address;
         short pc;
         char mode;
@@ -417,31 +400,25 @@ public:
 
     // addBranchCycles adds a cycle for taking a branch and adds another cycle
     // if the branch jumps to a new page
-    void addBranchCycles(stepInfo info)
-    {
+    void addBranchCycles(stepInfo info) {
         Cycles++;
-        if (pagesDiffer(info.pc, info.address))
-        {
+        if (pagesDiffer(info.pc, info.address)) {
             Cycles++;
         }
     }
 
-    void compare(char a, char b)
-    {
+    void compare(char a, char b) {
         setZN(a - b);
-        if (a >= b)
-        {
+        if (a >= b) {
             C = 1;
         }
-        else
-        {
+        else {
             C = 0;
         }
     }
 
     // Read16 reads two bytes using Read to return a double-word value
-    short Read16(short address)
-    {
+    short Read16(short address) {
         char lo = short(Read(address));
         char hi = short(Read(address + 1));
         return hi << 8 | lo;
@@ -449,8 +426,7 @@ public:
 
     // read16bug emulates a 6502 bug that caused the low byte to wrap without
     // incrementing the high byte
-    short read16bug(short address)
-    {
+    short read16bug(short address) {
         short a = address;
         short b = (a & 0xFF00) | short(char(a) + 1);
         char lo = Read(a);
@@ -459,22 +435,19 @@ public:
     }
 
     // push pushes a byte onto the stack
-    void push(char value)
-    {
+    void push(char value) {
         Write(0x100 | short(SP), value);
         SP--;
     }
 
     // pull pops a byte from the stack
-    char pull()
-    {
+    char pull() {
         SP++;
         return (Read(0x100 | short(SP)));
     }
 
     // push16 pushes two bytes onto the stack
-    void push16(short value)
-    {
+    void push16(short value) {
         char hi = char(value >> 8);
         char lo = char(value & 0xFF);
         push(hi);
@@ -482,16 +455,14 @@ public:
     }
 
     // pull16 pops two bytes from the stack
-    short pull16()
-    {
+    short pull16() {
         short lo = short(pull());
         short hi = short(pull());
         return hi << 8 | lo;
     }
 
     // Flags returns the processor status flags
-    char Flags()
-    {
+    char Flags() {
         char flags = 0;
         flags |= C << 0;
         flags |= Z << 1;
@@ -505,8 +476,7 @@ public:
     }
 
     // SetFlags sets the processor status flags
-    void SetFlags(char flags)
-    {
+    void SetFlags(char flags) {
         C = (flags >> 0) & 1;
         Z = (flags >> 1) & 1;
         I = (flags >> 2) & 1;
@@ -518,56 +488,45 @@ public:
     }
 
     // setZ sets the zero flag if the argument is zero
-    void setZ(char value)
-    {
-        if (value == 0)
-        {
+    void setZ(char value) {
+        if (value == 0) {
             Z = 1;
         }
-        else
-        {
+        else {
             Z = 0;
         }
     }
 
     // setN sets the negative flag if the argument is negative (high bit is set)
-    void setN(char value)
-    {
-        if (value & 0x80 != 0)
-        {
+    void setN(char value) {
+        if (value & 0x80 != 0) {
             N = 1;
         }
-        else
-        {
+        else {
             N = 0;
         }
     }
 
     // setZN sets the zero flag and the negative flag
-    void setZN(char value)
-    {
+    void setZN(char value) {
         setZ(value);
         setN(value);
     }
 
     // triggerNMI causes a non-maskable interrupt to occur on the next cycle
-    void triggerNMI()
-    {
+    void triggerNMI() {
         interrupt = interruptNMI;
     }
 
     // triggerIRQ causes an IRQ interrupt to occur on the next cycle
-    void triggerIRQ()
-    {
-        if (I == 0)
-        {
+    void triggerIRQ() {
+        if (I == 0) {
             interrupt = interruptIRQ;
         }
     }
 
     // NMI - Non-Maskable Interrupt
-    void nmi()
-    {
+    void nmi() {
         push16(PC);
         php();
         PC = Read16(0xFFFA);
@@ -576,8 +535,7 @@ public:
     }
 
     // IRQ - IRQ Interrupt
-    void irq()
-    {
+    void irq() {
         push16(PC);
         php();
         PC = Read16(0xFFFE);
@@ -586,49 +544,40 @@ public:
     }
 
     // ADC - Add with Carry
-    void adc(stepInfo info)
-    {
+    void adc(stepInfo info) {
         auto a = A;
         auto b = Read(info.address);
         auto c = C;
         A = a + b + c;
         setZN(A);
-        if (int(a) + int(b) + int(c) > 0xFF)
-        {
+        if (int(a) + int(b) + int(c) > 0xFF) {
             C = 1;
         }
-        else
-        {
+        else {
             C = 0;
         }
-        if (((a ^ b) & 0x80 == 0) && ((a ^ A) & 0x80 != 0))
-        {
+        if (((a ^ b) & 0x80 == 0) && ((a ^ A) & 0x80 != 0)) {
             V = 1;
         }
-        else
-        {
+        else {
             V = 0;
         }
     }
 
     // AND - Logical AND
-    void AND(stepInfo info)
-    {
+    void AND(stepInfo info) {
         A = A & Read(info.address);
         setZN(A);
     }
 
     // ASL - Arithmetic Shift Left
-    void asl(stepInfo info)
-    {
-        if (info.mode == modeAccumulator)
-        {
+    void asl(stepInfo info) {
+        if (info.mode == modeAccumulator) {
             C = (A >> 7) & 1;
             A <<= 1;
             setZN(A);
         }
-        else
-        {
+        else {
             auto value = Read(info.address);
             C = (value >> 7) & 1;
             value <<= 1;
@@ -638,38 +587,31 @@ public:
     }
 
     // BCC - Branch if Carry Clear
-    void bcc(stepInfo info)
-    {
-        if (C == 0)
-        {
+    void bcc(stepInfo info) {
+        if (C == 0) {
             PC = info.address;
             addBranchCycles(info);
         }
     }
 
     // BCS - Branch if Carry Set
-    void bcs(stepInfo info)
-    {
-        if (C != 0)
-        {
+    void bcs(stepInfo info) {
+        if (C != 0) {
             PC = info.address;
             addBranchCycles(info);
         }
     }
 
     // BEQ - Branch if Equal
-    void beq(stepInfo info)
-    {
-        if (Z != 0)
-        {
+    void beq(stepInfo info) {
+        if (Z != 0) {
             auto PC = info.address;
             auto addBranchCycles(info);
         }
     }
 
     // BIT - Bit Test
-    void bit(stepInfo info)
-    {
+    void bit(stepInfo info) {
         auto value = Read(info.address);
         V = (value >> 6) & 1;
         setZ(value & A);
@@ -677,38 +619,31 @@ public:
     }
 
     // BMI - Branch if Minus
-    void bmi(stepInfo info)
-    {
-        if (N != 0)
-        {
+    void bmi(stepInfo info) {
+        if (N != 0) {
             PC = info.address;
             addBranchCycles(info);
         }
     }
 
     // BNE - Branch if Not Equal
-    void bne(stepInfo info)
-    {
-        if (Z == 0)
-        {
+    void bne(stepInfo info) {
+        if (Z == 0) {
             PC = info.address;
             addBranchCycles(info);
         }
     }
 
     // BPL - Branch if Positive
-    void bpl(stepInfo info)
-    {
-        if (N == 0)
-        {
+    void bpl(stepInfo info) {
+        if (N == 0) {
             PC = info.address;
             addBranchCycles(info);
         }
     }
 
     // BRK - Force Interrupt
-    void brk(stepInfo info)
-    {
+    void brk(stepInfo info) {
         push16(PC);
         php(info);
         sei(info);
@@ -716,166 +651,140 @@ public:
     }
 
     // BVC - Branch if Overflow Clear
-    void bvc(stepInfo info)
-    {
-        if (V == 0)
-        {
+    void bvc(stepInfo info) {
+        if (V == 0) {
             PC = info.address;
             addBranchCycles(info);
         }
     }
 
     // BVS - Branch if Overflow Set
-    void bvs(stepInfo info)
-    {
-        if (V != 0)
-        {
+    void bvs(stepInfo info) {
+        if (V != 0) {
             PC = info.address;
             addBranchCycles(info);
         }
     }
 
     // CLC - Clear Carry Flag
-    void clc(stepInfo info)
-    {
+    void clc(stepInfo info) {
         C = 0;
     }
 
     // CLD - Clear Decimal Mode
-    void cld(stepInfo info)
-    {
+    void cld(stepInfo info) {
         D = 0;
     }
 
     // CLI - Clear Interrupt Disable
-    void cli(stepInfo info)
-    {
+    void cli(stepInfo info) {
         I = 0;
     }
 
     // CLV - Clear Overflow Flag
-    void clv(stepInfo info)
-    {
+    void clv(stepInfo info) {
         V = 0;
     }
 
     // CMP - Compare
-    void cmp(stepInfo info)
-    {
+    void cmp(stepInfo info) {
         auto value = Read(info.address);
         compare(A, value);
     }
 
     // CPX - Compare X Register
-    void cpx(stepInfo info)
-    {
+    void cpx(stepInfo info) {
         auto value = Read(info.address);
         compare(X, value);
     }
 
     // CPY - Compare Y Register
-    void cpy(stepInfo info)
-    {
+    void cpy(stepInfo info) {
         auto value = Read(info.address);
         compare(Y, value);
     }
 
     // DEC - Decrement Memory
-    void dec(stepInfo info)
-    {
+    void dec(stepInfo info) {
         auto value = Read(info.address) - 1;
         Write(info.address, value);
         setZN(value);
     }
 
     // DEX - Decrement X Register
-    void dex(stepInfo info)
-    {
+    void dex(stepInfo info) {
         X--;
         setZN(X);
     }
 
     // DEY - Decrement Y Register
-    void dey(stepInfo info)
-    {
+    void dey(stepInfo info) {
         Y--;
         setZN(Y);
     }
 
     // EOR - Exclusive OR
-    void eor(stepInfo info)
-    {
+    void eor(stepInfo info) {
         A = A ^ Read(info.address);
         setZN(A);
     }
 
     // INC - Increment Memory
-    void inc(stepInfo info)
-    {
+    void inc(stepInfo info) {
         auto value = Read(info.address) + 1;
         Write(info.address, value);
         setZN(value);
     }
 
     // INX - Increment X Register
-    void inx(stepInfo info)
-    {
+    void inx(stepInfo info) {
         X++;
         setZN(X);
     }
 
     // INY - Increment Y Register
-    void iny(stepInfo info)
-    {
+    void iny(stepInfo info) {
         Y++;
         setZN(Y);
     }
 
     // JMP - Jump
-    void jmp(stepInfo info)
-    {
+    void jmp(stepInfo info) {
         PC = info.address;
     }
 
     // JSR - Jump to Subroutine
-    void jsr(stepInfo info)
-    {
+    void jsr(stepInfo info) {
         push16(PC - 1);
         PC = info.address;
     }
 
     // LDA - Load Accumulator
-    void lda(stepInfo info)
-    {
+    void lda(stepInfo info) {
         A = Read(info.address);
         setZN(A);
     }
 
     // LDX - Load X Register
-    void ldx(stepInfo info)
-    {
+    void ldx(stepInfo info) {
         X = Read(info.address);
         setZN(X);
     }
 
     // LDY - Load Y Register
-    void ldy(stepInfo info)
-    {
+    void ldy(stepInfo info) {
         Y = Read(info.address);
         setZN(Y);
     }
 
     // LSR - Logical Shift Right
-    void lsr(stepInfo info)
-    {
-        if (info.mode == modeAccumulator)
-        {
+    void lsr(stepInfo info) {
+        if (info.mode == modeAccumulator) {
             C = A & 1;
             A >>= 1;
             setZN(A);
         }
-        else
-        {
+        else {
             auto value = Read(info.address);
             C = value & 1;
             value >>= 1;
@@ -885,59 +794,48 @@ public:
     }
 
     // NOP - No Operation
-    void nop(stepInfo info)
-    {
-    }
+    void nop(stepInfo info) {}
 
     // ORA - Logical Inclusive OR
-    void ora(stepInfo info)
-    {
+    void ora(stepInfo info) {
         A = A | Read(info.address);
         setZN(A);
     }
 
     // PHA - Push Accumulator
-    void pha(stepInfo info)
-    {
+    void pha(stepInfo info) {
         push(A);
     }
 
     // PHP - Push Processor Status
-    void php(stepInfo info)
-    {
+    void php(stepInfo info) {
         push(Flags() | 0x10);
     }
 
-    void php()
-    {
+    void php() {
         push(Flags() | 0x10);
     }
 
     // PLA - Pull Accumulator
-    void pla(stepInfo info)
-    {
+    void pla(stepInfo info) {
         A = pull();
         setZN(A);
     }
 
     // PLP - Pull Processor Status
-    void plp(stepInfo info)
-    {
+    void plp(stepInfo info) {
         SetFlags(pull() & 0xEF | 0x20);
     }
 
     // ROL - Rotate Left
-    void rol(stepInfo info)
-    {
-        if (info.mode == modeAccumulator)
-        {
+    void rol(stepInfo info) {
+        if (info.mode == modeAccumulator) {
             auto c = C;
             C = (A >> 7) & 1;
             A = (A << 1) | c;
             setZN(A);
         }
-        else
-        {
+        else {
             auto c = C;
             auto value = Read(info.address);
             C = (value >> 7) & 1;
@@ -948,17 +846,14 @@ public:
     }
 
     // ROR - Rotate Right
-    void ror(stepInfo info)
-    {
-        if (info.mode == modeAccumulator)
-        {
+    void ror(stepInfo info) {
+        if (info.mode == modeAccumulator) {
             auto c = C;
             C = A & 1;
             A = (A >> 1) | (c << 7);
             setZN(A);
         }
-        else
-        {
+        else {
             auto c = C;
             auto value = Read(info.address);
             C = value & 1;
@@ -969,198 +864,141 @@ public:
     }
 
     // RTI - Return from Interrupt
-    void rti(stepInfo info)
-    {
+    void rti(stepInfo info) {
         SetFlags(pull() & 0xEF | 0x20);
         PC = pull16();
     }
 
     // RTS - Return from Subroutine
-    void rts(stepInfo info)
-    {
+    void rts(stepInfo info) {
         PC = pull16() + 1;
     }
 
     // SBC - Subtract with Carry
-    void sbc(stepInfo info)
-    {
+    void sbc(stepInfo info) {
         auto a = A;
         auto b = Read(info.address);
         auto c = C;
         A = a - b - (1 - c);
         setZN(A);
-        if (int(a) - int(b) - int(1 - c) >= 0)
-        {
+        if (int(a) - int(b) - int(1 - c) >= 0) {
             C = 1;
         }
-        else
-        {
+        else {
             C = 0;
         }
-        if ((a ^ b) & 0x80 != 0 && (a ^ A) & 0x80 != 0)
-        {
+        if ((a ^ b) & 0x80 != 0 && (a ^ A) & 0x80 != 0) {
             V = 1;
         }
-        else
-        {
+        else {
             V = 0;
         }
     }
 
     // SEC - Set Carry Flag
-    void sec(stepInfo info)
-    {
+    void sec(stepInfo info) {
         C = 1;
     }
 
     // SED - Set Decimal Flag
-    void sed(stepInfo info)
-    {
+    void sed(stepInfo info) {
         D = 1;
     }
 
     // SEI - Set Interrupt Disable
-    void sei(stepInfo info)
-    {
+    void sei(stepInfo info) {
         I = 1;
     }
 
     // STA - Store Accumulator
-    void sta(stepInfo info)
-    {
+    void sta(stepInfo info) {
         Write(info.address, A);
     }
 
     // STX - Store X Register
-    void stx(stepInfo info)
-    {
+    void stx(stepInfo info) {
         Write(info.address, X);
     }
 
     // STY - Store Y Register
-    void sty(stepInfo info)
-    {
+    void sty(stepInfo info) {
         Write(info.address, Y);
     }
 
     // TAX - Transfer Accumulator to X
-    void tax(stepInfo info)
-    {
+    void tax(stepInfo info) {
         X = A;
         setZN(X);
     }
 
     // TAY - Transfer Accumulator to Y
-    void tay(stepInfo info)
-    {
+    void tay(stepInfo info) {
         Y = A;
         setZN(Y);
     }
 
     // TSX - Transfer Stack Pointer to X
-    void tsx(stepInfo info)
-    {
+    void tsx(stepInfo info) {
         X = SP;
         setZN(X);
     }
 
     // TXA - Transfer X to Accumulator
-    void txa(stepInfo info)
-    {
+    void txa(stepInfo info) {
         A = X;
         setZN(A);
     }
 
     // TXS - Transfer X to Stack Pointer
-    void txs(stepInfo info)
-    {
+    void txs(stepInfo info) {
         SP = X;
     }
 
     // TYA - Transfer Y to Accumulator
-    void tya(stepInfo info)
-    {
+    void tya(stepInfo info) {
         A = Y;
         setZN(A);
     }
 
     // illegal opcodes below
 
-    void ahx(stepInfo info)
-    {
-    }
+    void ahx(stepInfo info) {}
 
-    void alr(stepInfo info)
-    {
-    }
+    void alr(stepInfo info) {}
 
-    void anc(stepInfo info)
-    {
-    }
+    void anc(stepInfo info) {}
 
-    void arr(stepInfo info)
-    {
-    }
+    void arr(stepInfo info) {}
 
-    void axs(stepInfo info)
-    {
-    }
+    void axs(stepInfo info) {}
 
-    void dcp(stepInfo info)
-    {
-    }
+    void dcp(stepInfo info) {}
 
-    void isc(stepInfo info)
-    {
-    }
+    void isc(stepInfo info) {}
 
-    void kil(stepInfo info)
-    {
-    }
+    void kil(stepInfo info) {}
 
-    void las(stepInfo info)
-    {
-    }
+    void las(stepInfo info) {}
 
-    void lax(stepInfo info)
-    {
-    }
+    void lax(stepInfo info) {}
 
-    void rla(stepInfo info)
-    {
-    }
+    void rla(stepInfo info) {}
 
-    void rra(stepInfo info)
-    {
-    }
+    void rra(stepInfo info) {}
 
-    void sax(stepInfo info)
-    {
-    }
+    void sax(stepInfo info) {}
 
-    void shx(stepInfo info)
-    {
-    }
+    void shx(stepInfo info) {}
 
-    void shy(stepInfo info)
-    {
-    }
+    void shy(stepInfo info) {}
 
-    void slo(stepInfo info)
-    {
-    }
+    void slo(stepInfo info) {}
 
-    void sre(stepInfo info)
-    {
-    }
+    void sre(stepInfo info) {}
 
-    void tas(stepInfo info)
-    {
-    }
+    void tas(stepInfo info) {}
 
-    void xaa(stepInfo info)
-    {
-    }
+    void xaa(stepInfo info) {}
 };
 
 #endif  // CPPTEST_CPU_H
