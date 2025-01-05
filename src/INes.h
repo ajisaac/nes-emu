@@ -6,7 +6,6 @@
 #define NES_EMU_INES_H
 
 
-#include <string>
 #include <fstream>
 #include <vector>
 #include <iostream>
@@ -105,82 +104,7 @@ public:
 
 
 
-    // FLAGS 6
 
-    // 0 == vertical arrangement / "horizontal mirrored" (CIRAM a10 = PPU A11)
-    // 1 == horizontal arrangement / "veritcal mirrored" (CIRAM a10 = PPU A10)
-//    int nametableArrangement() {
-//        return header[6] | 0b00000001;
-//    }
-//
-//    int hasBatteryPrgRam() {
-//        return header[6] | 0b00000010;
-//    }
-//
-//    int hasTrainerData() {
-//        return header[6] | 0b00000100;
-//    }
-//
-//    int hasAlternativeNametableLayout() {
-//        return header[6] | 0b00001000;
-//    }
-//
-//    // first 4 bits of 6 and 7
-//    // 6's is low nibble, 7's is high nibble
-//    std::byte getMapper() {
-//        return (byte)((header[6] & 0b11110000) | ((header[7] & 0b11110000) >> 4));
-//    }
-//
-//    // FLAGS 7
-//    int hasVsUnisystem() {
-//        return header[7] | 0b00000001;
-//    }
-//
-//    int hasPlayChoice10() {
-//        return header[7] | 0b00000010;
-//    }
-//
-//    // if equal to 2, then yes
-//    int hasNes2format() {
-//        return header[7] | 0b00001100;
-//    }
-//
-//    // FLAGS 8
-//
-//    int prgRamSize() {
-//        return header[8];
-//    }
-//
-//    // 0:NTSC or 1:PAL
-//    int tvSystem() {
-//        return header[9] | 0b00000001;
-//    }
-//
-//    // reserved, set to 0
-//    int f9Reserved() {
-//        int i = header[9] & 0b11111110;
-//        if (i != 0) throw new IllegalStateException("f9 bits should be 0");
-//        return i;
-//    }
-//
-//    // FLAGS 10
-//
-//    // 0: NTSC, 2: PAL, 1/3: Dual Compatible
-//    int f10tvSystem() {
-//        return header[10] | 0b00000011;
-//    }
-//
-//    // 0: present, 1: not present
-//    int f10prgRam() {
-//        return header[10] | 0b00010000;
-//    }
-//
-//    // 0: no conflicts, 1: conflicts
-//    int f10busConflicts() {
-//        return header[10] | 0b00100000;
-//    }
-
-//}
 
 };
 

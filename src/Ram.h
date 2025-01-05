@@ -1,7 +1,6 @@
 #ifndef CPPTEST_RAM_H
 #define CPPTEST_RAM_H
 
-#include <cstddef>
 #include <iostream>
 #include "PPU.h"
 #include "APU.h"
