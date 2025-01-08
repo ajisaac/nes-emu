@@ -8,6 +8,7 @@ public:
     }
 
     void Write(short i, char i1) {}
+    void step();
 };
 
 #endif //NES_EMU_MAPPER_H

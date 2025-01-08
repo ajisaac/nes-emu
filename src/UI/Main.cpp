@@ -1,4 +1,3 @@
-#include "../INes.h"
 #include <bitset>
 #include <cstddef>
 
@@ -10,7 +9,7 @@ std::ostream& operator<<(std::ostream& os, std::byte b) {
 }
 
 int main() {
-    Emulator emulator{"/Users/aaron/Code/personal/nes-emu/data/Nintendo/Castlevania.nes"};
+    const Emulator emulator{"/Users/aaron/Code/personal/nes-emu/data/Nintendo/Castlevania.nes"};
     emulator.run();
 
     return 0;

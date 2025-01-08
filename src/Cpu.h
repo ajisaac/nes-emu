@@ -279,7 +279,7 @@ public:
 
 
     // Step executes a single CPU instruction
-    int Step() {
+    int step() {
         if (stall > 0) {
             stall--;
             return 1;
@@ -389,6 +389,9 @@ public:
     bool pagesDiffer(short a, short b) {
         return (a & 0xFF00) != (b & 0xFF00);
     }
+
+    // todo
+    void reset();
 
 
     // stepInfo contains information that the instruction functions use

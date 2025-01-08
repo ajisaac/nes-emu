@@ -8,6 +8,7 @@ public:
     }
 
     void writeRegister(short i, char i1) {}
+    void step();
 };
 
 

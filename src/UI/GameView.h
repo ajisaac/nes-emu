@@ -16,11 +16,6 @@ public:
 
     explicit GameView(std::string const& path): console{new Console{path}} {}
 
-    ~GameView() {
-        // clean up textures and such
-        delete console;
-    }
-
     void load(int snapshot) {
         // load state
         // view.console.loadState(hash, snapshot);
@@ -46,7 +41,6 @@ public:
         // grab window, grab console, to do controller update stuff
         // do some sort of joystickReset thing and possibly show menu
         updateControllers();
-
         console->stepSeconds(dt);
         // grab the buffer from the console, draw it with sdl
         // possibly do other things
@@ -61,6 +55,12 @@ public:
         // read keys, joysticks, etc
         // update the console state or something
     }
+
+    ~GameView() {
+        // clean up textures and such
+        delete console;
+    }
+
 };
 
 #endif //GAMEVIEW_H

@@ -3,9 +3,11 @@
 
 #include "Cartridge.h"
 
+// todo read up about this
 class PPU {
 public:
     Cartridge* cartridge;
+    unsigned long long frame;
     //
     //    )
     //
@@ -753,6 +755,7 @@ public:
     }
 
     void writeRegister(int i, char i1) {}
+    void step();
 
     // todo change
     char nameTableData[4096];

@@ -1,39 +1,104 @@
 #ifndef NES_EMU_CARTRIDGE_H
 #define NES_EMU_CARTRIDGE_H
 
+#include <fstream>
 #include <vector>
+
+/*
+ Header (16 bytes)
+ Trainer, if present (0 or 512 bytes)
+ PRG ROM data (16384 * x bytes)
+ CHR ROM data, if present (8192 * y bytes)
+ PlayChoice INST-ROM, if present (0 or 8192 bytes)
+ PlayChoice PROM, if present (16 bytes Data, 16 bytes CounterOut) (this is often missing; see PC10 ROM-Images for details)
+ */
 
 class Cartridge {
 public:
-    // prg-rom banks
-    // std::vector<char> prg;
-    // chr-rom banks
-    // std::vector<char> chr;
-    // mapper type
-    // int mapper;
-    // mirroring mode
-    // int mirror;
-    // battery backed ram
-    // int battery;
+    std::vector<char> prg;
+    std::vector<char> chr;
+    std::vector<char> sram;
+    int mapper;
+    int mirror;
+    int battery;
 
+    /**
+     * The beginning of every ines file format
+     */
+    const int MAGIC = 0x1a53454e;
 
-    explicit Cartridge(const std::string_view path) {
+    /**
+     * The first 16 bytes
+     */
+
+    explicit Cartridge(const std::string& path) {
         std::cout << path << std::endl;
-        // open the file at path
-        // throw exception if not there
-        // read bytes into memory
-        // close file
 
-        // read header into struct
-        // verify magic number
-        // determine mapper type
-        // determine mirroring type
-        // determine battery backed ram
+        // open file
+        std::ifstream file;
+        file.open(path);
+        if (!file.is_open()) {
+            exit(1);
+        }
+
+        std::vector<char> bytes((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
+        // read file header
+        // Magic number First 4 bytes
+        int c = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
+        if (c != MAGIC) {
+            std::cout << "Invalid iNES file" << std::endl;
+            exit(1);
+        }
+
+        // num of PRG-ROM in 16kb chunks
+        char numPrg = bytes[4];
+
+        // num of CHR-ROM banks in 8kb chunks, 0 means board uses CHR-RAM
+        char numChr = bytes[5];
+
+        char control1 = bytes[6];
+        char control2 = bytes[7];
+        char numRam = bytes[8]; // x 8KB
+
+        // unused
+        char flags9 = bytes[9];
+        char flags10 = bytes[10];
+
+        // mapper type
+        int mapper1 = control1 >> 4;
+        int mapper2 = control2 >> 4;
+        mapper = mapper1 | mapper2 << 4;
+
+        // mirroring type
+        int mirror1 = control1 & 1;
+        int mirror2 = (control1 >> 3) & 1;
+        mirror = mirror1 | mirror2 << 1;
+
+        // battery-backed RAM
+        battery = (control1 >> 1) & 1;
+
         // read trainer if present (unused)
+        if ((control1 & 4) == 4) {
+            std::vector<char> trainer{};
+            for (int i = 0; i < 512; i++) {
+                trainer[i] = bytes[i];
+            }
+        }
+
         // read prg-rom bank(s)
+        prg.resize(numPrg * 16384);
+        for (int i = 0; i < numPrg * 16384; i++) {
+            prg[i] = bytes[i];
+        }
+
         // read chr-rom bank(s)
-        // provide chr-rom/ram if not in file
-        // initialize things
+        chr.resize(numChr * 8192);
+        for (int i = 0; i < numChr * 8192; i++) {
+            chr[i] = bytes[i];
+        }
+
+        std::cout << "get out of my house " << std::endl;
     }
 };
 

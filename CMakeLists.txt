@@ -17,7 +17,6 @@ set(SOURCES
         src/Controller.h
         src/Cpu.h
         src/Graphics.h
-        src/INes.h
         src/UI/Main.cpp
         src/Mapper.h
         src/PPU.h
