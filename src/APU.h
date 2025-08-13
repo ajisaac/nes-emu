@@ -3,11 +3,10 @@
 
 class APU {
 public:
-    char readRegister(short i) {
-        return 0;
-    }
+    char readRegister(short i);
 
-    void writeRegister(short i, char i1) {}
+    void writeRegister(short i, char i1);
+
     void step();
 };
 
