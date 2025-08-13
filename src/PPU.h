@@ -29,7 +29,6 @@ public:
         explicit RGBA(Rect rect);
     };
 
-private:
     Ram *ram;
     Console *console;
 
@@ -102,7 +101,6 @@ private:
     uint8_t bufferedData{}; // for buffered reads
 
 
-public:
     explicit PPU(Console *console);
 
     uint8_t Read(uint16_t address);
