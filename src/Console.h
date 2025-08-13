@@ -7,7 +7,7 @@
 
 class Console {
 public:
-    PPU ppu{};
+    PPU ppu{this};
     APU apu{};
     Controller controller1{};
     Controller controller2{};
@@ -16,67 +16,31 @@ public:
     Ram ram;
     Cpu cpu;
 
-    explicit Console(std::string const& path)
-        : cartridge{path},
-          ram{&ppu, &apu, &controller1, &controller2, &mapper},
-          cpu{&ram} {
-        // cartridge should automatically load
-    }
+    explicit Console(std::string const &path);
 
-    void reset() {
-        cpu.reset();
-    }
+    void reset();
 
-    int step() {
-        const auto cpuCycles = cpu.step();
-        const auto ppuCycles = cpuCycles * 3;
-        for (int i = 0; i < ppuCycles; i++) {
-            ppu.step();
-            mapper.step();
-        }
-        for (int i = 0; i < cpuCycles; i++) {
-            apu.step();
-        }
-        return cpuCycles;
-    }
+    int step();
 
-    int stepFrame() {
-        auto cpuCycles = 0;
-        unsigned long long frame = ppu.frame;
-        while (frame == ppu.frame) {
-            cpuCycles += step();
-        }
-        return cpuCycles;
-    }
+    int stepFrame();
 
-    void stepSeconds(unsigned long long seconds) {
-        // cpu frequency
-        auto cycles = 1789773 * seconds * 1000;
-        while (cycles > 0) {
-            cycles -= step();
-        }
-    }
+    void stepSeconds(unsigned long long seconds);
 
-    int* buffer() {
-        // return ppu.front();
-        return nullptr;
-    }
+    int *buffer();
 
-    int backgroundColor() {
-        return 0;
-    }
+    int backgroundColor();
 
-    void setButtons1(char buttons) {}
+    void setButtons1(char buttons);
 
-    void setButtons2(char buttons) {}
+    void setButtons2(char buttons);
 
-    void setAudioChannel() {}
+    void setAudioChannel();
 
-    void setAudioSampleRate(long long sampleRate) {}
+    void setAudioSampleRate(long long sampleRate);
 
-    void saveState(std::string filename) {}
+    void saveState(std::string filename);
 
-    void loadState(std::string filename) {}
+    void loadState(std::string filename);
 
     ~Console() = default;
 };
