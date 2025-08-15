@@ -2,6 +2,11 @@
 
 #include <cstdint>
 #include <print>
+
+#include "APU.h"
+#include "Console.h"
+#include "Controller.h"
+#include "Mapper.h"
 #include "PPU.h"
 
 uint8_t ram[2048] = {};
@@ -82,7 +87,7 @@ uint8_t Ram::ReadPpuMemory(uint16_t address) {
         return mapper->read(address);
     }
     if (address < 0x3F00) {
-        int mode = ppu->cartridge->mirror;
+        int mode = console->cartridge.mirror;
         return ppu->nameTableData[MirrorAddress(mode, address) % 2048];
     }
     if (address < 0x4000) {
@@ -98,7 +103,7 @@ void Ram::WritePpuMemory(uint16_t address, const uint8_t value) {
     if (address < 0x2000) {
         mapper->write(address, value);
     } else if (address < 0x3F00) {
-        int mode = ppu->cartridge->mirror;
+        int mode = console->cartridge.mirror;
         ppu->nameTableData[MirrorAddress(mode, address) % 2048] = value;
     } else if (address < 0x4000) {
         ppu->writePalette(address % 32, value);

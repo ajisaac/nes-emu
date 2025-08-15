@@ -2,10 +2,12 @@
 #define RAM_H
 
 #include <iostream>
-#include "PPU.h"
-#include "APU.h"
-#include "Controller.h"
-#include "Mapper.h"
+
+class PPU;
+class APU;
+class Controller;
+class Mapper;
+class Console;
 
 class Ram {
 public:
@@ -14,13 +16,15 @@ public:
     Controller *controller1;
     Controller *controller2;
     Mapper *mapper;
+    Console *console;
 
-    Ram(PPU *ppu, APU *apu, Controller *controller1, Controller *controller2, Mapper *mapper) {
+    Ram(PPU *ppu, APU *apu, Controller *controller1, Controller *controller2, Mapper *mapper, Console *console) {
         this->ppu = ppu;
         this->apu = apu;
         this->controller1 = controller1;
         this->controller2 = controller2;
         this->mapper = mapper;
+        this->console = console;
     }
 
     uint8_t read(const uint16_t address) const;

@@ -1,9 +1,23 @@
 #ifndef CPPTEST_CONSOLE_H
 #define CPPTEST_CONSOLE_H
+#include <string>
 
-#include "Cpu.h"
-#include "Ram.h"
+#include "APU.h"
 #include "Cartridge.h"
+#include "Controller.h"
+#include "Cpu.h"
+#include "Mapper.h"
+#include "PPU.h"
+#include "Ram.h"
+
+class PPU;
+class APU;
+class Controller;
+class Cartridge;
+class Mapper;
+class Ram;
+class Cpu;
+
 
 class Console {
 public:

@@ -1,5 +1,7 @@
 #include "PPU.h"
 
+#include "Console.h"
+
 PPU::PPU(Console *console) {
     // ppu := PPU{Memory: NewPPUMemory(console), console: console};
     front = RGBA{Rect{0, 0, 256, 240}};
@@ -188,9 +190,8 @@ void PPU::writeData(uint8_t value) {
     }
 }
 
-
 void PPU::writeDMA(uint8_t value) {
-    auto cpu = console.CPU;
+    auto cpu = console->cpu;
     auto address = uint16_t(value) << 8;
     for (auto i = 0; i < 256; i++) {
         oamData[oamAddress] = cpu.Read(address);
@@ -279,13 +280,15 @@ void PPU::clearVerticalBlank() {
 }
 
 void PPU::fetchNameTableByte() {
-    auto v = v;
+    // todo
+    // auto v = v;
     auto address = 0x2000 | (v & 0x0FFF);
     nameTableByte = Read(address);
 }
 
 void PPU::fetchAttributeTableByte() {
-    auto v = v;
+    // todo
+    // auto v = v;
     auto address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
     auto shift = ((v >> 4) & 4) | (v & 2);
     attributeTableByte = ((Read(address) >> shift) & 3) << 2;
@@ -386,8 +389,9 @@ void PPU::renderPixel() {
             color = background;
         }
     }
-    auto c = Palette[readPalette(uint16_t(color)) % 64];
-    back.SetRGBA(x, y, c);
+    // todo
+    // auto c = Palette[readPalette(uint16_t(color)) % 64];
+    // back.SetRGBA(x, y, c);
 }
 
 uint32_t PPU::fetchSpritePattern(int32_t i, int32_t row) {
@@ -471,7 +475,7 @@ void PPU::tick() {
     if (nmiDelay > 0) {
         nmiDelay--;
         if (nmiDelay == 0 && nmiOutput && nmiOccurred) {
-            console.CPU.triggerNMI();
+            console->cpu.triggerNMI();
         }
     }
 

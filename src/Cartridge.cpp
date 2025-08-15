@@ -12,12 +12,13 @@ const int MAGIC = 0x1a53454e;
  */
 
 Cartridge::Cartridge(const std::string &path) {
-    std::cout << path << std::endl;
+    std::println("Opening cartridge: {}", path);
 
     // open file
     std::ifstream file;
     file.open(path);
     if (!file.is_open()) {
+        std::println("Unable to open file {}", path);
         exit(1);
     }
 

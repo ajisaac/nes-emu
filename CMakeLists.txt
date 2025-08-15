@@ -21,7 +21,7 @@ set(SOURCES
         src/Controller.cpp
         src/Cpu.h
         src/Cpu.cpp
-        src/Emulator.cpp
+        src/Main.cpp
         src/Graphics.h
         src/Graphics.cpp
         src/Mapper.h

@@ -19,14 +19,14 @@ public:
     public:
         Rect() = default;
 
-        Rect(int i, int i1, int i2, int i3);
+        Rect(int i, int i1, int i2, int i3){};
     };
 
     class RGBA {
     public:
         RGBA() = default;
 
-        explicit RGBA(Rect rect);
+        explicit RGBA(Rect rect){};
     };
 
     Ram *ram;

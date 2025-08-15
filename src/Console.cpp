@@ -3,7 +3,7 @@
 
 Console::Console(std::string const& path)
     : cartridge{path},
-      ram{&ppu, &apu, &controller1, &controller2, &mapper},
+      ram{&ppu, &apu, &controller1, &controller2, &mapper, this},
       cpu{&ram} {
     // cartridge should automatically load
 }
@@ -34,7 +34,7 @@ int Console::stepFrame() {
     return cpuCycles;
 }
 
-void Console::stepSeconds(unsigned long long seconds) {
+void Console::stepSeconds(const unsigned long long seconds) {
     // cpu frequency
     auto cycles = 1789773 * seconds * 1000;
     while (cycles > 0) {
