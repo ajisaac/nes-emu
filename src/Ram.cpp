@@ -103,7 +103,7 @@ void Ram::WritePpuMemory(uint16_t address, const uint8_t value) {
     if (address < 0x2000) {
         mapper->write(address, value);
     } else if (address < 0x3F00) {
-        int mode = console->cartridge.mirror;
+        const int mode = console->cartridge.mirror;
         ppu->nameTableData[MirrorAddress(mode, address) % 2048] = value;
     } else if (address < 0x4000) {
         ppu->writePalette(address % 32, value);
@@ -113,8 +113,8 @@ void Ram::WritePpuMemory(uint16_t address, const uint8_t value) {
 }
 
 uint16_t Ram::MirrorAddress(uint8_t mode, uint16_t address) {
-    int address_div = (address - 0x2000) % 0x1000;
-    int table = address_div / 0x0400;
-    int offset = address_div % 0x0400;
+    const int address_div = (address - 0x2000) % 0x1000;
+    const int table = address_div / 0x0400;
+    const int offset = address_div % 0x0400;
     return 0x2000 + MirrorLookup[mode][table] * 0x0400 + offset;
 }

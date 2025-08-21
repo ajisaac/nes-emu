@@ -2,10 +2,12 @@
 
 #include "Console.h"
 
-PPU::PPU(Console *console) {
+PPU::PPU(Console *console)
+    : front{Buffer{Rect{0, 0, 256, 240}}}, back{Buffer{Rect{0, 0, 256, 240}}} {
     // ppu := PPU{Memory: NewPPUMemory(console), console: console};
-    front = RGBA{Rect{0, 0, 256, 240}};
-    back = RGBA{Rect{0, 0, 256, 240}};
+    this->console = console;
+    this->ram = &console->ram;
+
     reset();
 }
 
@@ -17,15 +19,15 @@ void PPU::Write(uint16_t address, uint8_t value) {
 
 
 void PPU::reset() {
-    Cycle = 340;
-    ScanLine = 240;
-    Frame = 0;
+    cycle = 340;
+    scanline = 240;
+    frame = 0;
     writeControl(0);
     writeMask(0);
     writeOAMAddress(0);
 }
 
-uint8_t PPU::readPalette(uint16_t address) {
+uint8_t PPU::readPalette(uint16_t address) const {
     if (address >= 16 && address % 4 == 0) {
         address -= 16;
     }
@@ -342,7 +344,7 @@ void PPU::spritePixel() {
         // return 0, 0;
     }
     for (auto i = 0; i < spriteCount; i++) {
-        auto offset = (Cycle - 1) - int(spritePositions[i]);
+        auto offset = (cycle - 1) - int(spritePositions[i]);
         if (offset < 0 || offset > 7) {
             continue;
         }
@@ -357,8 +359,8 @@ void PPU::spritePixel() {
 }
 
 void PPU::renderPixel() {
-    auto x = Cycle - 1;
-    auto y = ScanLine;
+    auto x = cycle - 1;
+    auto y = scanline;
     auto background = backgroundPixel();
     // auto i, auto sprite = spritePixel();
     // todo fix;
@@ -452,7 +454,7 @@ void PPU::evaluateSprites() {
         auto y = oamData[i * 4 + 0];
         auto a = oamData[i * 4 + 2];
         auto x = oamData[i * 4 + 3];
-        auto row = ScanLine - int(y);
+        auto row = scanline - int(y);
         if (row < 0 || row >= h) {
             continue;
         }
@@ -480,21 +482,21 @@ void PPU::tick() {
     }
 
     if (flagShowBackground != 0 || flagShowSprites != 0) {
-        if (f == 1 && ScanLine == 261 && Cycle == 339) {
-            Cycle = 0;
-            ScanLine = 0;
-            Frame++;
+        if (f == 1 && scanline == 261 && cycle == 339) {
+            cycle = 0;
+            scanline = 0;
+            frame++;
             f ^= 1;
             return;
         }
     }
-    Cycle++;
-    if (Cycle > 340) {
-        Cycle = 0;
-        ScanLine++;
-        if (ScanLine > 261) {
-            ScanLine = 0;
-            Frame++;
+    cycle++;
+    if (cycle > 340) {
+        cycle = 0;
+        scanline++;
+        if (scanline > 261) {
+            scanline = 0;
+            frame++;
             f ^= 1;
         }
     }
@@ -504,12 +506,12 @@ void PPU::step() {
     tick();
 
     auto renderingEnabled = flagShowBackground != 0 || flagShowSprites != 0;
-    auto preLine = ScanLine == 261;
-    auto visibleLine = ScanLine < 240;
+    auto preLine = scanline == 261;
+    auto visibleLine = scanline < 240;
     // postLine := ScanLine == 240
     auto renderLine = preLine || visibleLine;
-    auto preFetchCycle = Cycle >= 321 && Cycle <= 336;
-    auto visibleCycle = Cycle >= 1 && Cycle <= 256;
+    auto preFetchCycle = cycle >= 321 && cycle <= 336;
+    auto visibleCycle = cycle >= 1 && cycle <= 256;
     auto fetchCycle = preFetchCycle || visibleCycle;
 
     // background logic
@@ -519,7 +521,7 @@ void PPU::step() {
         }
         if (renderLine && fetchCycle) {
             tileData <<= 4;
-            switch (Cycle % 8) {
+            switch (cycle % 8) {
                 case 1:
                     fetchNameTableByte();
                     break;
@@ -537,17 +539,17 @@ void PPU::step() {
                     break;
             }
         }
-        if (preLine && Cycle >= 280 && Cycle <= 304) {
+        if (preLine && cycle >= 280 && cycle <= 304) {
             copyY();
         }
         if (renderLine) {
-            if (fetchCycle && Cycle % 8 == 0) {
+            if (fetchCycle && cycle % 8 == 0) {
                 incrementX();
             }
-            if (Cycle == 256) {
+            if (cycle == 256) {
                 incrementY();
             }
-            if (Cycle == 257) {
+            if (cycle == 257) {
                 copyX();
             }
         }
@@ -555,7 +557,7 @@ void PPU::step() {
 
     // sprite logic
     if (renderingEnabled) {
-        if (Cycle == 257) {
+        if (cycle == 257) {
             if (visibleLine) {
                 evaluateSprites();
             } else {
@@ -565,10 +567,10 @@ void PPU::step() {
     }
 
     // vblank logic
-    if (ScanLine == 241 && Cycle == 1) {
+    if (scanline == 241 && cycle == 1) {
         setVerticalBlank();
     }
-    if (preLine && Cycle == 1) {
+    if (preLine && cycle == 1) {
         clearVerticalBlank();
         flagSpriteZeroHit = 0;
         flagSpriteOverflow = 0;

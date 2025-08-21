@@ -4,44 +4,44 @@
 
 class Console;
 class Ram;
-// class CPU {
-//
-// };
-// class Console {
-// public:
-//     CPU* CPU;
-// };
-// class Ram;
-//
+
 class PPU {
 public:
     class Rect {
     public:
-        Rect() = default;
+        uint32_t x;
+        uint32_t y;
+        uint32_t w;
+        uint32_t h;
 
-        Rect(int i, int i1, int i2, int i3){};
+        Rect() = delete;
+        Rect(const uint32_t x, const uint32_t y, const uint32_t w, const uint32_t h)
+            : x{x}, y{y}, w{w}, h{h} {
+        }
     };
 
-    class RGBA {
+    class Buffer {
     public:
-        RGBA() = default;
+        Rect rect;
 
-        explicit RGBA(Rect rect){};
+        Buffer() = delete;
+        explicit Buffer(const Rect rect) : rect{rect} {
+        }
     };
 
     Ram *ram;
     Console *console;
 
-    int32_t Cycle{};      // 0-340
-    int32_t ScanLine{};   // 0-261, 0-239=visible, 240=post, 241-260=vblank, 261=pre
-    uint64_t Frame{};     // frame counter
+    int32_t cycle{};      // 0-340
+    int32_t scanline{};   // 0-261, 0-239=visible, 240=post, 241-260=vblank, 261=pre
+    uint64_t frame{};     // frame counter
 
     // storage variables
     uint8_t paletteData[32]{};
     uint8_t nameTableData[2048]{};
     uint8_t oamData[256]{};
-    RGBA front{};
-    RGBA back{};
+    Buffer front;
+    Buffer back;
 
     // PPU registers
     uint16_t v{};  // current vram address (15 bit)
@@ -100,7 +100,6 @@ public:
     // $2007 PPUDATA
     uint8_t bufferedData{}; // for buffered reads
 
-
     explicit PPU(Console *console);
 
     uint8_t Read(uint16_t address);
@@ -109,7 +108,7 @@ public:
 
     void reset();
 
-    uint8_t readPalette(uint16_t address);
+    uint8_t readPalette(uint16_t address) const;
 
     void writePalette(uint16_t address, uint8_t value);
 

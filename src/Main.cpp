@@ -78,7 +78,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
     // possibly do other things
 
 
-    SDL_FRect dst_rect;
+    SDL_FRect dst_rect{};
     SDL_Surface *surface = nullptr;
 
 
@@ -93,7 +93,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
             pixels[i] = pixel{static_cast<uint8_t>(i % NES_WIDTH), static_cast<uint8_t>(i / NES_HEIGHT), static_cast<uint8_t>(i / NES_WIDTH)};
         }
 
-        SDL_Rect r;
+        SDL_Rect r{};
         r.w = 1;
         r.h = 1;
         for (uint32_t i = 0; i < NES_WIDTH * NES_HEIGHT; i++) {

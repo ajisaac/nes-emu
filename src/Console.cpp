@@ -27,8 +27,8 @@ int Console::step() {
 
 int Console::stepFrame() {
     auto cpuCycles = 0;
-    unsigned long long frame = ppu.Frame;
-    while (frame == ppu.Frame) {
+    unsigned long long frame = ppu.frame;
+    while (frame == ppu.frame) {
         cpuCycles += step();
     }
     return cpuCycles;
