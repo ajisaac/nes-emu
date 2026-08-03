@@ -15,12 +15,12 @@
 
 class Cartridge {
 public:
-    std::vector<char> prg;
-    std::vector<char> chr;
-    std::vector<char> sram;
-    int mapper;
-    int mirror;
-    int battery;
+    std::vector<uint8_t> prg;
+    std::vector<uint8_t> chr;
+    std::vector<uint8_t> sram;
+    uint8_t mapper;
+    uint8_t mirror;
+    uint8_t battery;
 
     /**
      * The beginning of every ines file format

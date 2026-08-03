@@ -5,30 +5,22 @@
 #include "APU.h"
 #include "Cartridge.h"
 #include "Controller.h"
-#include "Cpu.h"
+#include "CPU.h"
 #include "Mapper.h"
 #include "PPU.h"
 #include "Ram.h"
 
-class PPU;
-class APU;
-class Controller;
-class Cartridge;
-class Mapper;
-class Ram;
-class Cpu;
-
 
 class Console {
 public:
-    PPU ppu{this};
-    APU apu{};
-    Controller controller1{};
-    Controller controller2{};
-    Cartridge cartridge;
-    Mapper mapper{};
-    Ram ram;
-    Cpu cpu;
+    CPU *cpu;
+    APU *apu;
+    PPU *ppu;
+    Controller *controller1;
+    Controller *controller2;
+    Cartridge *cartridge;
+    Mapper *mapper;
+    Ram *ram;
 
     explicit Console(std::string const &path);
 
@@ -38,23 +30,19 @@ public:
 
     int stepFrame();
 
-    void stepSeconds(unsigned long long seconds);
+    void stepSeconds(double seconds);
 
-    int *buffer();
+    PPU::Buffer *buffer();
 
-    int backgroundColor();
+    PPU::Buffer *backgroundColor();
 
-    void setButtons1(char buttons);
+    void setButtons1(bool buttons[8]);
 
-    void setButtons2(char buttons);
+    void setButtons2(bool buttons[8]);
 
-    void setAudioChannel();
+    void setAudioChannel(); // todo
 
-    void setAudioSampleRate(long long sampleRate);
-
-    void saveState(std::string filename);
-
-    void loadState(std::string filename);
+    void setAudioSampleRate(double sampleRate);
 
     ~Console() = default;
 };

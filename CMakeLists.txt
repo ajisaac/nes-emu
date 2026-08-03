@@ -26,6 +26,7 @@ set(SOURCES
         src/Graphics.cpp
         src/Mapper.h
         src/Mapper.cpp
+        src/Palette.h
         src/PPU.h
         src/PPU.cpp
         src/Ram.h

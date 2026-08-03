@@ -2,8 +2,7 @@
 
 #include "Console.h"
 
-PPU::PPU(Console *console)
-    : front{Buffer{Rect{0, 0, 256, 240}}}, back{Buffer{Rect{0, 0, 256, 240}}} {
+PPU::PPU(Console *console) : front{Buffer{Rect{0, 0, 256, 240}}}, back{Buffer{Rect{0, 0, 256, 240}}} {
     // ppu := PPU{Memory: NewPPUMemory(console), console: console};
     this->console = console;
     this->ram = &console->ram;
@@ -34,21 +33,24 @@ uint8_t PPU::readPalette(uint16_t address) const {
     return paletteData[address];
 }
 
-void PPU::writePalette(uint16_t address, uint8_t value) {
+void PPU::writePalette(uint16_t address, const uint8_t value) {
     if (address >= 16 && address % 4 == 0) {
         address -= 16;
     }
     paletteData[address] = value;
 }
 
-uint8_t PPU::readRegister(uint16_t address) {
+uint8_t PPU::readRegister(const uint16_t address) const {
     switch (address) {
         case 0x2002:
             return readStatus();
+            break;
         case 0x2004:
             return readOAMData();
+            break;
         case 0x2007:
             return readData();
+            break;
     }
     return 0;
 }
@@ -58,119 +60,136 @@ void PPU::writeRegister(uint16_t address, uint8_t value) {
     switch (address) {
         case 0x2000:
             writeControl(value);
+            break;
         case 0x2001:
             writeMask(value);
+            break;
         case 0x2003:
             writeOAMAddress(value);
+            break;
         case 0x2004:
             writeOAMData(value);
+            break;
         case 0x2005:
             writeScroll(value);
+            break;
         case 0x2006:
             writeAddress(value);
+            break;
         case 0x2007:
             writeData(value);
+            break;
         case 0x4014:
             writeDMA(value);
+            break;
+        default:
+            break;
     }
 }
 
-void PPU::writeControl(uint8_t value) {
-    flagNameTable = (value >> 0) & 3;
-    flagIncrement = (value >> 2) & 1;
-    flagSpriteTable = (value >> 3) & 1;
-    flagBackgroundTable = (value >> 4) & 1;
-    flagSpriteSize = (value >> 5) & 1;
-    flagMasterSlave = (value >> 6) & 1;
-    nmiOutput = ((value >> 7) & 1) == 1;
+// $2000: PPUCTRL
+void PPU::writeControl(const uint8_t value) {
+    flagNameTable = value >> 0 & 3;
+    flagIncrement = value >> 2 & 1;
+    flagSpriteTable = value >> 3 & 1;
+    flagBackgroundTable = value >> 4 & 1;
+    flagSpriteSize = value >> 5 & 1;
+    flagMasterSlave = value >> 6 & 1;
+    nmiOutput = (value >> 7 & 1) == 1;
     nmiChange();
     // t: ....BA.. ........ = d: ......BA
-    t = (t & 0xF3FF) | ((static_cast<uint16_t>(value) & 0x03) << 10);
+    t = t & 0xF3FF | (static_cast<uint16_t>(value) & 0x03) << 10;
 }
 
-void PPU::writeMask(uint8_t value) {
-    flagGrayscale = (value >> 0) & 1;
-    flagShowLeftBackground = (value >> 1) & 1;
-    flagShowLeftSprites = (value >> 2) & 1;
-    flagShowBackground = (value >> 3) & 1;
-    flagShowSprites = (value >> 4) & 1;
-    flagRedTint = (value >> 5) & 1;
-    flagGreenTint = (value >> 6) & 1;
-    flagBlueTint = (value >> 7) & 1;
+// $2001: PPUMASK
+void PPU::writeMask(const uint8_t value) {
+    flagGrayscale = value >> 0 & 1;
+    flagShowLeftBackground = value >> 1 & 1;
+    flagShowLeftSprites = value >> 2 & 1;
+    flagShowBackground = value >> 3 & 1;
+    flagShowSprites = value >> 4 & 1;
+    flagRedTint = value >> 5 & 1;
+    flagGreenTint = value >> 6 & 1;
+    flagBlueTint = value >> 7 & 1;
 }
 
+// $2002: PPUSTATUS
 uint8_t PPU::readStatus() {
-    auto result = cpu_register & 0x1F;
-    result |= flagSpriteOverflow << 5;
-    result |= flagSpriteZeroHit << 6;
+    uint8_t result = cpu_register & 0x1F;
+    result = result | flagSpriteOverflow << 5;
+    result = result | flagSpriteZeroHit << 6;
     if (nmiOccurred) {
-        result |= 1 << 7;
+        result = result | 1 << 7;
     }
     nmiOccurred = false;
     nmiChange();
-    // w:                   = 0
+    // w: = 0
     w = 0;
     return result;
 }
 
-void PPU::writeOAMAddress(uint8_t value) {
+// $2003: OAMADDR
+void PPU::writeOAMAddress(const uint8_t value) {
     oamAddress = value;
 }
 
-uint8_t PPU::readOAMData() {
-    auto data = oamData[oamAddress];
+// $2004: OAMDATA (read)
+uint8_t PPU::readOAMData() const {
+    uint8_t data = oamData[oamAddress];
     if ((oamAddress & 0x03) == 0x02) {
         data = data & 0xE3;
     }
     return data;
 }
 
-void PPU::writeOAMData(uint8_t value) {
+// $2004: OAMDATA (write)
+void PPU::writeOAMData(const uint8_t value) {
     oamData[oamAddress] = value;
     oamAddress++;
 }
 
-void PPU::writeScroll(uint8_t value) {
+// $2005: PPUSCROLL
+void PPU::writeScroll(const uint8_t value) {
     if (w == 0) {
         // t: ........ ...HGFED = d: HGFED...
         // x:               CBA = d: .....CBA
         // w:                   = 1
-        t = (t & 0xFFE0) | (uint16_t(value) >> 3);
+        t = t & 0xFFE0 | static_cast<uint16_t>(value) >> 3;
         x = value & 0x07;
         w = 1;
     } else {
         // t: .CBA..HG FED..... = d: HGFEDCBA
         // w:                   = 0
-        t = (t & 0x8FFF) | ((uint16_t(value) & 0x07) << 12);
-        t = (t & 0xFC1F) | ((uint16_t(value) & 0xF8) << 2);
+        t = t & 0x8FFF | (static_cast<uint16_t>(value) & 0x07) << 12;
+        t = t & 0xFC1F | (static_cast<uint16_t>(value) & 0xF8) << 2;
         w = 0;
     }
 }
 
-void PPU::writeAddress(uint8_t value) {
+// $2006: PPUADDR
+void PPU::writeAddress(const uint8_t value) {
     if (w == 0) {
         // t: ..FEDCBA ........ = d: ..FEDCBA
         // t: .X...... ........ = 0
         // w:                   = 1
-        t = (t & 0x80FF) | ((uint16_t(value) & 0x3F) << 8);
+        t = t & 0x80FF | (static_cast<uint16_t>(value) & 0x3F) << 8;
         w = 1;
     } else {
         // t: ........ HGFEDCBA = d: HGFEDCBA
         // v                    = t
         // w:                   = 0
-        t = (t & 0xFF00) | uint16_t(value);
+        t = t & 0xFF00 | static_cast<uint16_t>(value);
         v = t;
         w = 0;
     }
 }
 
+// $2007: PPUDATA (read)
 uint8_t PPU::readData() {
-    auto value = Read(v);
+    uint8_t value = Read(v);
     // emulate buffered reads
     if (v % 0x4000 < 0x3F00) {
-        auto buffered = bufferedData;
-        bufferedData = value;
-        value = buffered;
+        std::swap(bufferedData, value);
     } else {
         bufferedData = Read(v - 0x1000);
     }
@@ -183,6 +202,7 @@ uint8_t PPU::readData() {
     return value;
 }
 
+// $2007: PPUDATA (write)
 void PPU::writeData(uint8_t value) {
     Write(v, value);
     if (flagIncrement == 0) {
@@ -192,10 +212,11 @@ void PPU::writeData(uint8_t value) {
     }
 }
 
+// $4014: OAMDMA
 void PPU::writeDMA(uint8_t value) {
-    auto cpu = console->cpu;
-    auto address = uint16_t(value) << 8;
-    for (auto i = 0; i < 256; i++) {
+    CPU cpu = console->cpu;
+    uint16_t address = static_cast<uint16_t>(value) << 8;
+    for (size_t i = 0; i < 256; i++) {
         oamData[oamAddress] = cpu.Read(address);
         oamAddress++;
         address++;
@@ -206,10 +227,12 @@ void PPU::writeDMA(uint8_t value) {
     }
 }
 
+// NTSC Timing Helper Functions
+
 void PPU::incrementX() {
     // increment hori(v)
     // if coarse X == 31
-    if (v & 0x001F == 31) {
+    if ((v & 0x001F) == 31) {
         // coarse X = 0
         v &= 0xFFE0;
         // switch horizontal nametable
@@ -223,14 +246,14 @@ void PPU::incrementX() {
 void PPU::incrementY() {
     // increment vert(v)
     // if fine Y < 7
-    if (v & 0x7000 != 0x7000) {
+    if ((v & 0x7000) != 0x7000) {
         // increment fine Y
         v += 0x1000;
     } else {
         // fine Y = 0
         v &= 0x8FFF;
         // let y = coarse Y
-        auto y = (v & 0x03E0) >> 5;
+        uint16_t y = (v & 0x03E0) >> 5;
         if (y == 29) {
             // coarse Y = 0
             y = 0;
@@ -244,24 +267,24 @@ void PPU::incrementY() {
             y++;
         }
         // put coarse Y back into v
-        v = (v & 0xFC1F) | (y << 5);
+        v = v & 0xFC1F | y << 5;
     }
 }
 
 void PPU::copyX() {
     // hori(v) = hori(t)
     // v: .....F.. ...EDCBA = t: .....F.. ...EDCBA
-    v = (v & 0xFBE0) | (t & 0x041F);
+    v = v & 0xFBE0 | t & 0x041F;
 }
 
 void PPU::copyY() {
     // vert(v) = vert(t)
     // v: .IHGF.ED CBA..... = t: .IHGF.ED CBA.....
-    v = (v & 0x841F) | (t & 0x7BE0);
+    v = v & 0x841F | t & 0x7BE0;
 }
 
 void PPU::nmiChange() {
-    auto nmi = nmiOutput && nmiOccurred;
+    const bool nmi = nmiOutput && nmiOccurred;
     if (nmi && !nmiPrevious) {
         // TODO: this fixes some games but the delay shouldn't have to be so
         // long, so the timings are off somewhere
@@ -271,7 +294,7 @@ void PPU::nmiChange() {
 }
 
 void PPU::setVerticalBlank() {
-    front, back = back, front;
+    std::swap(front, back);
     nmiOccurred = true;
     nmiChange();
 }
@@ -282,99 +305,92 @@ void PPU::clearVerticalBlank() {
 }
 
 void PPU::fetchNameTableByte() {
-    // todo
-    // auto v = v;
-    auto address = 0x2000 | (v & 0x0FFF);
+    uint16_t address = 0x2000 | v & 0x0FFF;
     nameTableByte = Read(address);
 }
 
 void PPU::fetchAttributeTableByte() {
-    // todo
-    // auto v = v;
-    auto address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
-    auto shift = ((v >> 4) & 4) | (v & 2);
-    attributeTableByte = ((Read(address) >> shift) & 3) << 2;
+    const uint16_t address = 0x23C0 | v & 0x0C00 | v >> 4 & 0x38 | v >> 2 & 0x07;
+    const uint16_t shift = v >> 4 & 4 | v & 2;
+    attributeTableByte = (Read(address) >> shift & 3) << 2;
 }
 
 void PPU::fetchLowTileByte() {
-    auto fineY = (v >> 12) & 7;
-    auto table = flagBackgroundTable;
-    auto tile = nameTableByte;
-    auto address = 0x1000 * uint16_t(table) + uint16_t(tile) * 16 + fineY;
+    const uint16_t fineY = v >> 12 & 7;
+    const uint16_t table = flagBackgroundTable;
+    const uint16_t tile = nameTableByte;
+    const uint16_t address = 0x1000 * table + tile * 16 + fineY;
     lowTileByte = Read(address);
 }
 
 void PPU::fetchHighTileByte() {
-    auto fineY = (v >> 12) & 7;
-    auto table = flagBackgroundTable;
-    auto tile = nameTableByte;
-    auto address = 0x1000 * uint16_t(table) + uint16_t(tile) * 16 + fineY;
+    const uint16_t fineY = v >> 12 & 7;
+    const uint16_t table = flagBackgroundTable;
+    const uint16_t tile = nameTableByte;
+    const uint16_t address = 0x1000 * table + tile * 16 + fineY;
     highTileByte = Read(address + 8);
 }
 
 void PPU::storeTileData() {
-    uint32_t data;
-    for (auto i = 0; i < 8; i++) {
-        auto a = attributeTableByte;
-        auto p1 = (lowTileByte & 0x80) >> 7;
-        auto p2 = (highTileByte & 0x80) >> 6;
+    uint32_t data{};
+    for (size_t i = 0; i < 8; i++) {
+        const uint8_t a = attributeTableByte;
+        const uint8_t p1 = (lowTileByte & 0x80) >> 7;
+        const uint8_t p2 = (highTileByte & 0x80) >> 6;
         lowTileByte <<= 1;
         highTileByte <<= 1;
         data <<= 4;
-        data |= uint32_t(a | p1 | p2);
+        data |= static_cast<uint32_t>(a | p1 | p2);
     }
-    tileData |= uint64_t(data);
+    tileData |= static_cast<uint64_t>(data);
 }
 
-uint32_t PPU::fetchTileData() {
-    return uint32_t(tileData >> 32);
+uint32_t PPU::fetchTileData() const {
+    return static_cast<uint32_t>(tileData >> 32);
 }
 
-uint8_t PPU::backgroundPixel() {
+uint8_t PPU::backgroundPixel() const {
     if (flagShowBackground == 0) {
         return 0;
     }
-    auto data = fetchTileData() >> ((7 - x) * 4);
-    return uint8_t(data & 0x0F);
+    const uint32_t data = fetchTileData() >> ((7 - x) * 4);
+    return static_cast<uint8_t>(data & 0x0F);
 }
 
-// (uint8_t, uint8_t)  spritePixel() {
-void PPU::spritePixel() {
+PPU::SpritePixelReturn PPU::spritePixel() const {
     if (flagShowSprites == 0) {
-        // return 0, 0;
+        return SpritePixelReturn{0, 0};
     }
     for (auto i = 0; i < spriteCount; i++) {
-        auto offset = (cycle - 1) - int(spritePositions[i]);
+        int64_t offset = cycle - 1 - static_cast<int64_t>(spritePositions[i]);
         if (offset < 0 || offset > 7) {
             continue;
         }
         offset = 7 - offset;
-        auto color = uint8_t((spritePatterns[i] >> uint8_t(offset * 4)) & 0x0F);
+        const uint8_t color = static_cast<uint8_t>(spritePatterns[i] >> static_cast<uint8_t>(offset * 4) & 0x0F);
         if (color % 4 == 0) {
             continue;
         }
-        // return uint8_t(i), color;
+        return SpritePixelReturn{static_cast<uint8_t>(i), color};
     }
-    // return 0, 0;
+    return SpritePixelReturn{0, 0};
 }
 
+
 void PPU::renderPixel() {
-    auto x = cycle - 1;
-    auto y = scanline;
-    auto background = backgroundPixel();
-    // auto i, auto sprite = spritePixel();
-    // todo fix;
-    auto i = 0;
-    auto sprite = 0;
+    int64_t x = cycle - 1;
+    int64_t y = scanline;
+    uint8_t background = backgroundPixel();
+    auto [i, sprite] = spritePixel();
     if (x < 8 && flagShowLeftBackground == 0) {
         background = 0;
     }
     if (x < 8 && flagShowLeftSprites == 0) {
         sprite = 0;
     }
-    auto b = background % 4 != 0;
-    auto s = sprite % 4 != 0;
-    std::uint8_t color;
+    const bool b = background % 4 != 0;
+    const bool s = sprite % 4 != 0;
+    uint8_t color;
     if (!b && !s) {
         color = 0;
     } else if (!b && s) {
@@ -392,8 +408,8 @@ void PPU::renderPixel() {
         }
     }
     // todo
-    // auto c = Palette[readPalette(uint16_t(color)) % 64];
-    // back.SetRGBA(x, y, c);
+    auto c = Palette[readPalette(uint16_t(color)) % 64];
+    back.SetRGBA(x, y, c);
 }
 
 uint32_t PPU::fetchSpritePattern(int32_t i, int32_t row) {
@@ -461,7 +477,7 @@ void PPU::evaluateSprites() {
         if (count < 8) {
             spritePatterns[count] = fetchSpritePattern(i, row);
             spritePositions[count] = x;
-            spritePriorities[count] = (a >> 5) & 1;
+            spritePriorities[count] = a >> 5 & 1;
             spriteIndexes[count] = uint8_t(i);
         }
         count++;
@@ -576,103 +592,3 @@ void PPU::step() {
         flagSpriteOverflow = 0;
     }
 }
-
-
-/*
-    //    func (ppu *PPU) Save(encoder *gob.Encoder) error {
-    //        encoder.Encode(Cycle)
-    //        encoder.Encode(ScanLine)
-    //        encoder.Encode(Frame)
-    //        encoder.Encode(paletteData)
-    //        encoder.Encode(nameTableData)
-    //        encoder.Encode(oamData)
-    //        encoder.Encode(v)
-    //        encoder.Encode(t)
-    //        encoder.Encode(x)
-    //        encoder.Encode(w)
-    //        encoder.Encode(f)
-    //        encoder.Encode(cpu_register)
-    //        encoder.Encode(nmiOccurred)
-    //        encoder.Encode(nmiOutput)
-    //        encoder.Encode(nmiPrevious)
-    //        encoder.Encode(nmiDelay)
-    //        encoder.Encode(nameTableByte)
-    //        encoder.Encode(attributeTableByte)
-    //        encoder.Encode(lowTileByte)
-    //        encoder.Encode(highTileByte)
-    //        encoder.Encode(tileData)
-    //        encoder.Encode(spriteCount)
-    //        encoder.Encode(spritePatterns)
-    //        encoder.Encode(spritePositions)
-    //        encoder.Encode(spritePriorities)
-    //        encoder.Encode(spriteIndexes)
-    //        encoder.Encode(flagNameTable)
-    //        encoder.Encode(flagIncrement)
-    //        encoder.Encode(flagSpriteTable)
-    //        encoder.Encode(flagBackgroundTable)
-    //        encoder.Encode(flagSpriteSize)
-    //        encoder.Encode(flagMasterSlave)
-    //        encoder.Encode(flagGrayscale)
-    //        encoder.Encode(flagShowLeftBackground)
-    //        encoder.Encode(flagShowLeftSprites)
-    //        encoder.Encode(flagShowBackground)
-    //        encoder.Encode(flagShowSprites)
-    //        encoder.Encode(flagRedTint)
-    //        encoder.Encode(flagGreenTint)
-    //        encoder.Encode(flagBlueTint)
-    //        encoder.Encode(flagSpriteZeroHit)
-    //        encoder.Encode(flagSpriteOverflow)
-    //        encoder.Encode(oamAddress)
-    //        encoder.Encode(bufferedData)
-    //        return nil
-    //    }
-    //
-    //    func (ppu *PPU) Load(decoder *gob.Decoder) error {
-    //        decoder.Decode(&Cycle)
-    //        decoder.Decode(&ScanLine)
-    //        decoder.Decode(&Frame)
-    //        decoder.Decode(&paletteData)
-    //        decoder.Decode(&nameTableData)
-    //        decoder.Decode(&oamData)
-    //        decoder.Decode(&v)
-    //        decoder.Decode(&t)
-    //        decoder.Decode(&x)
-    //        decoder.Decode(&w)
-    //        decoder.Decode(&f)
-    //        decoder.Decode(&cpu_register)
-    //        decoder.Decode(&nmiOccurred)
-    //        decoder.Decode(&nmiOutput)
-    //        decoder.Decode(&nmiPrevious)
-    //        decoder.Decode(&nmiDelay)
-    //        decoder.Decode(&nameTableByte)
-    //        decoder.Decode(&attributeTableByte)
-    //        decoder.Decode(&lowTileByte)
-    //        decoder.Decode(&highTileByte)
-    //        decoder.Decode(&tileData)
-    //        decoder.Decode(&spriteCount)
-    //        decoder.Decode(&spritePatterns)
-    //        decoder.Decode(&spritePositions)
-    //        decoder.Decode(&spritePriorities)
-    //        decoder.Decode(&spriteIndexes)
-    //        decoder.Decode(&flagNameTable)
-    //        decoder.Decode(&flagIncrement)
-    //        decoder.Decode(&flagSpriteTable)
-    //        decoder.Decode(&flagBackgroundTable)
-    //        decoder.Decode(&flagSpriteSize)
-    //        decoder.Decode(&flagMasterSlave)
-    //        decoder.Decode(&flagGrayscale)
-    //        decoder.Decode(&flagShowLeftBackground)
-    //        decoder.Decode(&flagShowLeftSprites)
-    //        decoder.Decode(&flagShowBackground)
-    //        decoder.Decode(&flagShowSprites)
-    //        decoder.Decode(&flagRedTint)
-    //        decoder.Decode(&flagGreenTint)
-    //        decoder.Decode(&flagBlueTint)
-    //        decoder.Decode(&flagSpriteZeroHit)
-    //        decoder.Decode(&flagSpriteOverflow)
-    //        decoder.Decode(&oamAddress)
-    //        decoder.Decode(&bufferedData)
-    //        return nil
-    //    }
-    //
-    */

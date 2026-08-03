@@ -15,6 +15,7 @@ public:
         uint32_t h;
 
         Rect() = delete;
+
         Rect(const uint32_t x, const uint32_t y, const uint32_t w, const uint32_t h)
             : x{x}, y{y}, w{w}, h{h} {
         }
@@ -25,8 +26,14 @@ public:
         Rect rect;
 
         Buffer() = delete;
+
         explicit Buffer(const Rect rect) : rect{rect} {
         }
+    };
+
+    struct SpritePixelReturn {
+        uint8_t i;
+        uint8_t sprite;
     };
 
     Ram *ram;
@@ -112,7 +119,7 @@ public:
 
     void writePalette(uint16_t address, uint8_t value);
 
-    uint8_t readRegister(uint16_t address);
+    uint8_t readRegister(uint16_t address) const;
 
     void writeRegister(uint16_t address, uint8_t value);
 
@@ -129,7 +136,7 @@ public:
     void writeOAMAddress(uint8_t value);
 
     // $2004: OAMDATA (read)
-    uint8_t readOAMData();
+    uint8_t readOAMData() const;
 
     // $2004: OAMDATA (write)
     void writeOAMData(uint8_t value);
@@ -175,13 +182,11 @@ public:
 
     void storeTileData();
 
-    uint32_t fetchTileData();
+    uint32_t fetchTileData() const;
 
-    uint8_t backgroundPixel();
+    uint8_t backgroundPixel() const;
 
-    // todo fix
-    // (uint8_t, uint8_t)  spritePixel() {
-    void spritePixel();
+    SpritePixelReturn spritePixel() const;
 
     void renderPixel();
 

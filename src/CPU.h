@@ -4,7 +4,7 @@
 
 class Ram;
 
-class Cpu {
+class CPU {
 public:
     // interrupt types
     enum interupt_types {
@@ -171,7 +171,7 @@ public:
     // interrupt type to perform
     interupt_types interrupt{interruptNone};
 
-    explicit Cpu(Ram *pRam);
+    explicit CPU(Ram *pRam);
 
     short Read(short address);
 
