@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "Console.h"
+#include "Filter.h"
 
 constexpr int CPUFrequency = 1789773;
 constexpr double frameCounterRate = CPUFrequency / 240.0;
@@ -66,12 +67,6 @@ class DMC {
     void stepShifter();
 
     uint8_t output();
-
-    char readRegister(short i);
-
-    void writeRegister(short i, char i1);
-
-    void step();
 };
 
 class Noise {
