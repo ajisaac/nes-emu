@@ -36,6 +36,7 @@ constexpr uint8_t dmcTable[16]{
 class CPU;
 
 class DMC {
+public:
     CPU *cpu;
     bool enabled;
     uint8_t value;
@@ -70,9 +71,10 @@ class DMC {
 };
 
 class Noise {
+public:
+    uint16_t shiftRegister;
     bool enabled;
     bool mode;
-    uint16_t shiftRegister;
     bool lengthEnabled;
     uint8_t lengthValue;
     uint16_t timerPeriod;
@@ -101,6 +103,7 @@ class Noise {
 };
 
 class Triangle {
+public:
     bool enabled;
     bool lengthEnabled;
     uint8_t lengthValue;
@@ -127,8 +130,9 @@ class Triangle {
 };
 
 class Pulse {
-    bool enabled;
+public:
     uint8_t channel;
+    bool enabled;
     bool lengthEnabled;
     uint8_t lengthValue;
     uint16_t timerPeriod;
@@ -172,6 +176,7 @@ class Pulse {
 
 class APU {
 public:
+    APU();
     static float pulseTable[31];
     static float tndTable[203];
 
@@ -190,9 +195,6 @@ public:
     bool frameIRQ;
     FilterChain filterChain;
 
-    APU();
-
-    void init();
 
     void step();
 

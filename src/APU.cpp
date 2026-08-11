@@ -1,6 +1,13 @@
 #include "APU.h"
 
-void APU::init() {
+APU::APU() {
+    this->console = console;
+    this->noise.shiftRegister = 1;
+    this->pulse1.channel = 1;
+    this->pulse2.channel = 2;
+    this->framePeriod = 4;
+    this->dmc.cpu = console->cpu;
+
     for (size_t i = 0; i < 31; i++) {
         pulseTable[i] = 95.52 / (8128.0 / static_cast<float>(i) + 100);
     }
@@ -9,27 +16,18 @@ void APU::init() {
     }
 }
 
-APU::APU() {
-    this->console = console;
-    this->noise.shiftRegister = 1;
-    this->pulse1.channel = 1;
-    this->pulse2.channel = 2;
-    this->framePeriod = 4;
-    this->dmc.cpu = console->CPU;
-}
-
 void APU::step() {
-    auto cycle1 = this->cycle;
+    const auto cycle1 = this->cycle;
     this->cycle++;
-    auto cycle2 = this->cycle;
+    const auto cycle2 = this->cycle;
     this->stepTimer();
-    auto f1 = static_cast<int>(static_cast<double>(cycle1) / frameCounterRate);
-    auto f2 = static_cast<int>(static_cast<double>(cycle2) / frameCounterRate);
+    const auto f1 = static_cast<int>(static_cast<double>(cycle1) / frameCounterRate);
+    const auto f2 = static_cast<int>(static_cast<double>(cycle2) / frameCounterRate);
     if (f1 != f2) {
         this->stepFrameCounter();
     }
-    auto s1 = static_cast<int>(static_cast<double>(cycle1) / this->sampleRate);
-    auto s2 = static_cast<int>(static_cast<double>(cycle2) / this->sampleRate);
+    const auto s1 = static_cast<int>(static_cast<double>(cycle1) / this->sampleRate);
+    const auto s2 = static_cast<int>(static_cast<double>(cycle2) / this->sampleRate);
     if (s1 != s2) {
         this->sendSample();
     }
@@ -45,13 +43,13 @@ void APU::sendSample() {
 }
 
 float APU::output() {
-    auto p1 = this->pulse1.output();
-    auto p2 = this->pulse2.output();
-    auto t = this->triangle.output();
-    auto n = this->noise.output();
-    auto d = this->dmc.output();
-    auto pulseOut = pulseTable[p1 + p2];
-    auto tndOut = tndTable[3 * t + 2 * n + d];
+    const auto p1 = this->pulse1.output();
+    const auto p2 = this->pulse2.output();
+    const auto t = this->triangle.output();
+    const auto n = this->noise.output();
+    const auto d = this->dmc.output();
+    const auto pulseOut = pulseTable[p1 + p2];
+    const auto tndOut = tndTable[3 * t + 2 * n + d];
     return pulseOut + tndOut;
 }
 
@@ -319,7 +317,7 @@ void Pulse::stepLength() {
 }
 
 void Pulse::sweep() {
-    auto delta = this->timerPeriod >> this->sweepShift;
+    const auto delta = this->timerPeriod >> this->sweepShift;
     if (this->sweepNegate) {
         this->timerPeriod -= delta;
         if (this->channel == 1) {
@@ -441,8 +439,8 @@ void Noise::stepTimer() {
         } else {
             shift = 1;
         }
-        auto b1 = this->shiftRegister & 1;
-        auto b2 = (this->shiftRegister >> shift) & 1;
+        const auto b1 = this->shiftRegister & 1;
+        const auto b2 = (this->shiftRegister >> shift) & 1;
         this->shiftRegister >>= 1;
         this->shiftRegister |= (b1 ^ b2) << 14;
     } else {
