@@ -116,13 +116,13 @@ void APU::stepLength() {
     this->noise.stepLength();
 }
 
-void APU::fireIRQ() {
+void APU::fireIRQ() const {
     if (this->frameIRQ) {
-        this->console->CPU.triggerIRQ();
+        this->console->cpu->triggerIRQ();
     }
 }
 
-uint8_t APU::readRegister(uint16_t address) {
+uint8_t APU::readRegister(const uint16_t address) const {
     if (address == 0x4015) {
         return this->readStatus();
         // default:
@@ -131,7 +131,7 @@ uint8_t APU::readRegister(uint16_t address) {
     return 0;
 }
 
-void APU::writeRegister(uint16_t address, uint8_t value) {
+void APU::writeRegister(const uint16_t address, const uint8_t value) {
     switch (address) {
         case 0x4000:
             this->pulse1.writeControl(value);
@@ -180,7 +180,7 @@ void APU::writeRegister(uint16_t address, uint8_t value) {
     }
 }
 
-uint8_t APU::readStatus() {
+uint8_t APU::readStatus() const {
     uint8_t result = 0;
     if (this->pulse1.lengthValue > 0) {
         result |= 1;
@@ -200,7 +200,7 @@ uint8_t APU::readStatus() {
     return result;
 }
 
-void APU::writeControl(uint8_t value) {
+void APU::writeControl(const uint8_t value) {
     this->pulse1.enabled = (value & 1) == 1;
     this->pulse2.enabled = (value & 2) == 2;
     this->triangle.enabled = (value & 4) == 4;
@@ -238,8 +238,9 @@ void APU::writeFrameCounter(const uint8_t value) {
     }
 }
 
-void Pulse::writeControl(uint8_t value) {
+void Pulse::writeControl(const uint8_t value) {
     this->dutyMode = (value >> 6) & 3;
+    // todo
     this->lengthEnabled = (value >> 5) & 1 == 0;
     this->envelopeLoop = (value >> 5) & 1 == 1;
     this->envelopeEnabled = (value >> 4) & 1 == 0;
@@ -248,7 +249,7 @@ void Pulse::writeControl(uint8_t value) {
     this->envelopeStart = true;
 }
 
-void Pulse::writeSweep(uint8_t value) {
+void Pulse::writeSweep(const uint8_t value) {
     this->sweepEnabled = (value >> 7) & 1 == 1;
     this->sweepPeriod = (value >> 4) & 7 + 1;
     this->sweepNegate = (value >> 3) & 1 == 1;
@@ -256,13 +257,13 @@ void Pulse::writeSweep(uint8_t value) {
     this->sweepReload = true;
 }
 
-void Pulse::writeTimerLow(uint8_t value) {
-    this->timerPeriod = (this->timerPeriod & 0xFF00) | uint16_t(value);
+void Pulse::writeTimerLow(const uint8_t value) {
+    this->timerPeriod = (this->timerPeriod & 0xFF00) | static_cast<uint16_t>(value);
 }
 
-void Pulse::writeTimerHigh(uint8_t value) {
+void Pulse::writeTimerHigh(const uint8_t value) {
     this->lengthValue = lengthTable[value >> 3];
-    this->timerPeriod = (this->timerPeriod & 0x00FF) | (uint16_t(value & 7) << 8);
+    this->timerPeriod = (this->timerPeriod & 0x00FF) | (static_cast<uint16_t>(value & 7) << 8);
     this->envelopeStart = true;
     this->dutyValue = 0;
 }
@@ -328,7 +329,7 @@ void Pulse::sweep() {
     }
 }
 
-uint8_t Pulse::output() {
+uint8_t Pulse::output() const {
     if (!this->enabled) {
         return 0;
     }
@@ -346,21 +347,20 @@ uint8_t Pulse::output() {
     // }
     if (this->envelopeEnabled) {
         return this->envelopeVolume;
-    } else {
-        return this->constantVolume;
     }
+    return this->constantVolume;
 }
 
-void Triangle::writeControl(uint8_t value) {
+void Triangle::writeControl(const uint8_t value) {
     this->lengthEnabled = (value >> 7) & 1 == 0;
     this->counterPeriod = value & 0x7F;
 }
 
-void Triangle::writeTimerLow(uint8_t value) {
+void Triangle::writeTimerLow(const uint8_t value) {
     this->timerPeriod = (this->timerPeriod & 0xFF00) | static_cast<uint16_t>(value);
 }
 
-void Triangle::writeTimerHigh(uint8_t value) {
+void Triangle::writeTimerHigh(const uint8_t value) {
     this->lengthValue = lengthTable[value >> 3];
     this->timerPeriod = (this->timerPeriod & 0x00FF) | (static_cast<uint16_t>(value & 7) << 8);
     this->timerValue = this->timerPeriod;
@@ -395,7 +395,7 @@ void Triangle::stepCounter() {
     }
 }
 
-uint8_t Triangle::output() {
+uint8_t Triangle::output() const {
     if (!this->enabled) {
         return 0;
     }
@@ -411,7 +411,7 @@ uint8_t Triangle::output() {
     return triangleTable[this->dutyValue];
 }
 
-void Noise::writeControl(uint8_t value) {
+void Noise::writeControl(const uint8_t value) {
     this->lengthEnabled = (value >> 5) & 1 == 0;
     this->envelopeLoop = (value >> 5) & 1 == 1;
     this->envelopeEnabled = (value >> 4) & 1 == 0;
@@ -471,7 +471,7 @@ void Noise::stepLength() {
     }
 }
 
-uint8_t Noise::output() {
+uint8_t Noise::output() const {
     if (!this->enabled) {
         return 0;
     }
@@ -559,6 +559,6 @@ void DMC::stepShifter() {
     this->bitCount--;
 }
 
-uint8_t DMC::output() {
+uint8_t DMC::output() const {
     return this->value;
 }

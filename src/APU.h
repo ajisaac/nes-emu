@@ -67,7 +67,7 @@ public:
 
     void stepShifter();
 
-    uint8_t output();
+    uint8_t output() const;
 };
 
 class Noise {
@@ -99,7 +99,7 @@ public:
 
     void stepLength();
 
-    uint8_t output();
+    uint8_t output() const;
 };
 
 class Triangle {
@@ -126,7 +126,7 @@ public:
 
     void stepCounter();
 
-    uint8_t output();
+    uint8_t output() const;
 };
 
 class Pulse {
@@ -171,7 +171,7 @@ public:
 
     void sweep();
 
-    uint8_t output();
+    uint8_t output() const;
 };
 
 class APU {
@@ -217,13 +217,13 @@ public:
 
     void stepLength();
 
-    void fireIRQ();
+    void fireIRQ() const;
 
-    uint8_t readRegister(uint16_t address);
+    uint8_t readRegister(uint16_t address) const;
 
     void writeRegister(uint16_t address, uint8_t value);
 
-    uint8_t readStatus();
+    uint8_t readStatus() const;
 
     void writeControl(uint8_t value);
 
