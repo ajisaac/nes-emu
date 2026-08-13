@@ -352,7 +352,7 @@ uint8_t Pulse::output() const {
 }
 
 void Triangle::writeControl(const uint8_t value) {
-    this->lengthEnabled = (value >> 7) & 1 == 0;
+    this->lengthEnabled = ((value >> 7) & 1) == 0;
     this->counterPeriod = value & 0x7F;
 }
 
@@ -412,9 +412,9 @@ uint8_t Triangle::output() const {
 }
 
 void Noise::writeControl(const uint8_t value) {
-    this->lengthEnabled = (value >> 5) & 1 == 0;
-    this->envelopeLoop = (value >> 5) & 1 == 1;
-    this->envelopeEnabled = (value >> 4) & 1 == 0;
+    this->lengthEnabled = (value >> 5 & 1) == 0;
+    this->envelopeLoop = (value >> 5 & 1) == 1;
+    this->envelopeEnabled = (value >> 4 & 1) == 0;
     this->envelopePeriod = value & 15;
     this->constantVolume = value & 15;
     this->envelopeStart = true;
@@ -440,7 +440,7 @@ void Noise::stepTimer() {
             shift = 1;
         }
         const auto b1 = this->shiftRegister & 1;
-        const auto b2 = (this->shiftRegister >> shift) & 1;
+        const auto b2 = this->shiftRegister >> shift & 1;
         this->shiftRegister >>= 1;
         this->shiftRegister |= (b1 ^ b2) << 14;
     } else {
@@ -483,9 +483,8 @@ uint8_t Noise::output() const {
     }
     if (this->envelopeEnabled) {
         return this->envelopeVolume;
-    } else {
-        return this->constantVolume;
     }
+    return this->constantVolume;
 }
 
 void DMC::writeControl(const uint8_t value) {
