@@ -33,6 +33,8 @@ set(SOURCES
         src/Ram.cpp
         src/Filter.cpp
         src/Filter.h
+        src/ines.cpp
+        src/ines.h
 )
 add_executable(${PROJECT_NAME}_run ${SOURCES})
 
