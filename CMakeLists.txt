@@ -19,13 +19,27 @@ set(SOURCES
         src/Console.cpp
         src/Controller.h
         src/Controller.cpp
-        src/Cpu.h
-        src/Cpu.cpp
+        src/CPU.h
+        src/CPU.cpp
         src/Main.cpp
         src/Graphics.h
         src/Graphics.cpp
         src/Mapper.h
         src/Mapper.cpp
+        src/Mapper1.h
+        src/Mapper1.cpp
+        src/Mapper2.h
+        src/Mapper2.cpp
+        src/Mapper3.h
+        src/Mapper3.cpp
+        src/Mapper4.h
+        src/Mapper4.cpp
+        src/Mapper7.h
+        src/Mapper7.cpp
+        src/Mapper40.h
+        src/Mapper40.cpp
+        src/Mapper225.h
+        src/Mapper225.cpp
         src/Palette.h
         src/PPU.h
         src/PPU.cpp

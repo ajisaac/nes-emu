@@ -1,8 +1,10 @@
 #ifndef NES_EMU_CONTROLLER_H
 #define NES_EMU_CONTROLLER_H
+#include <array>
 #include <cstdint>
 
-enum class Buttons {
+// unscoped so the buttons can index a button array, like Go's constants
+enum Buttons {
     ButtonA,
     ButtonB,
     ButtonSelect,
@@ -14,12 +16,12 @@ enum class Buttons {
 };
 
 class Controller {
-    bool buttons[8]{};
+    std::array<bool, 8> buttons{};
     uint8_t index{};
     uint8_t strobe{};
 
 public:
-    void setButtons(bool buttons[8]);
+    void setButtons(const std::array<bool, 8> &buttons);
 
     uint8_t read();
 

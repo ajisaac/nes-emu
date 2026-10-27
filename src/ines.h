@@ -3,9 +3,18 @@
 #include <cstdint>
 #include <string>
 
-#include "Cartridge.h"
+class Cartridge;
 
-constexpr int iNESFileMagic = 0x1a53454e;
+/*
+ Header (16 bytes)
+ Trainer, if present (0 or 512 bytes)
+ PRG ROM data (16384 * x bytes)
+ CHR ROM data, if present (8192 * y bytes)
+ PlayChoice INST-ROM, if present (0 or 8192 bytes)
+ PlayChoice PROM, if present (16 bytes Data, 16 bytes CounterOut) (this is often missing; see PC10 ROM-Images for details)
+ */
+
+constexpr uint32_t iNESFileMagic = 0x1a53454e;
 
 struct iNESFileHeader {
     uint32_t Magic;    // iNES magic number
@@ -18,68 +27,9 @@ struct iNESFileHeader {
 };
 
 // LoadNESFile reads an iNES file (.nes) and returns a Cartridge on success.
+// Throws std::runtime_error on failure.
 // http://wiki.nesdev.com/w/index.php/INES
 // http://nesdev.com/NESDoc.pdf (page 28)
-Cartridge* LoadNESFile(const std::string& path) {
-    // open file
-    std::ifstream file{path};
-    if (!file.is_open()) {
-        throw std::runtime_error{"Unable to open file"};
-    }
-
-
-    // read file header
-    header := iNESFileHeader{}
-    if err := binary.Read(file, binary.LittleEndian, &header); err != nil {
-        return nil, err
-    }
-
-    // verify header magic number
-    if header.Magic != iNESFileMagic {
-        return nil, errors.New("invalid .nes file")
-    }
-
-    // mapper type
-    mapper1 := header.Control1 >> 4
-    mapper2 := header.Control2 >> 4
-    mapper := mapper1 | mapper2<<4
-
-    // mirroring type
-    mirror1 := header.Control1 & 1
-    mirror2 := (header.Control1 >> 3) & 1
-    mirror := mirror1 | mirror2<<1
-
-    // battery-backed RAM
-    battery := (header.Control1 >> 1) & 1
-
-    // read trainer if present (unused)
-    if header.Control1&4 == 4 {
-        trainer := make([]byte, 512)
-        if _, err := io.ReadFull(file, trainer); err != nil {
-            return nil, err
-        }
-    }
-
-    // read prg-rom bank(s)
-    prg := make([]byte, int(header.NumPRG)*16384)
-    if _, err := io.ReadFull(file, prg); err != nil {
-        return nil, err
-    }
-
-    // read chr-rom bank(s)
-    chr := make([]byte, int(header.NumCHR)*8192)
-    if _, err := io.ReadFull(file, chr); err != nil {
-        return nil, err
-    }
-
-    // provide chr-rom/ram if not in file
-    if header.NumCHR == 0 {
-        chr = make([]byte, 8192)
-    }
-
-    // success
-    return NewCartridge(prg, chr, mapper, mirror, battery), nil
-}
-
+Cartridge *LoadNESFile(const std::string &path);
 
 #endif //NES_EMU_INES_H

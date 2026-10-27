@@ -1,40 +1,40 @@
 #ifndef NES_EMU_PALETTE_H
 #define NES_EMU_PALETTE_H
+#include <array>
 #include <cstdint>
 
+// Color is one RGBA color, like Go's color.RGBA
 struct Color {
-    int8_t r;
-    int8_t g;
-    int8_t b;
-
-    Color() = default;
-
-    Color(int8_t r, int8_t g, int8_t b);
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+    uint8_t a;
 };
 
-
-class Palette {
-    Color colors[64]{};
-
-    Palette() {
-        for (int i = 0; i < 64; i++) {
-            constexpr int temp[64] = {
-                0x666666, 0x002A88, 0x1412A7, 0x3B00A4, 0x5C007E, 0x6E0040, 0x6C0600, 0x561D00,
-                0x333500, 0x0B4800, 0x005200, 0x004F08, 0x00404D, 0x000000, 0x000000, 0x000000,
-                0xADADAD, 0x155FD9, 0x4240FF, 0x7527FE, 0xA01ACC, 0xB71E7B, 0xB53120, 0x994E00,
-                0x6B6D00, 0x388700, 0x0C9300, 0x008F32, 0x007C8D, 0x000000, 0x000000, 0x000000,
-                0xFFFEFF, 0x64B0FF, 0x9290FF, 0xC676FF, 0xF36AFF, 0xFE6ECC, 0xFE8170, 0xEA9E22,
-                0xBCBE00, 0x88D800, 0x5CE430, 0x45E082, 0x48CDDE, 0x4F4F4F, 0x000000, 0x000000,
-                0xFFFEFF, 0xC0DFFF, 0xD3D2FF, 0xE8C8FF, 0xFBC2FF, 0xFEC4EA, 0xFECCC5, 0xF7D8A5,
-                0xE4E594, 0xCFEF96, 0xBDF4AB, 0xB3F3CC, 0xB5EBF2, 0xB8B8B8, 0x000000, 0x000000
-            };
-            colors[i] = Color{
-                static_cast<int8_t>(temp[i] >> 16 & 0xFF),
-                static_cast<int8_t>(temp[i] >> 8 & 0xFF),
-                static_cast<int8_t>(temp[i] & 0xFF)
-            };
-        }
+// Palette holds the 64 colors the NES can show, built at compile time the way
+// Go's init() builds it at startup
+constexpr std::array<Color, 64> Palette = [] {
+    constexpr uint32_t colors[64] = {
+        0x666666, 0x002A88, 0x1412A7, 0x3B00A4, 0x5C007E, 0x6E0040, 0x6C0600, 0x561D00,
+        0x333500, 0x0B4800, 0x005200, 0x004F08, 0x00404D, 0x000000, 0x000000, 0x000000,
+        0xADADAD, 0x155FD9, 0x4240FF, 0x7527FE, 0xA01ACC, 0xB71E7B, 0xB53120, 0x994E00,
+        0x6B6D00, 0x388700, 0x0C9300, 0x008F32, 0x007C8D, 0x000000, 0x000000, 0x000000,
+        0xFFFEFF, 0x64B0FF, 0x9290FF, 0xC676FF, 0xF36AFF, 0xFE6ECC, 0xFE8170, 0xEA9E22,
+        0xBCBE00, 0x88D800, 0x5CE430, 0x45E082, 0x48CDDE, 0x4F4F4F, 0x000000, 0x000000,
+        0xFFFEFF, 0xC0DFFF, 0xD3D2FF, 0xE8C8FF, 0xFBC2FF, 0xFEC4EA, 0xFECCC5, 0xF7D8A5,
+        0xE4E594, 0xCFEF96, 0xBDF4AB, 0xB3F3CC, 0xB5EBF2, 0xB8B8B8, 0x000000, 0x000000,
+    };
+    std::array<Color, 64> palette{};
+    for (size_t i = 0; i < palette.size(); i++) {
+        const uint32_t c = colors[i];
+        palette[i] = Color{
+            static_cast<uint8_t>(c >> 16),
+            static_cast<uint8_t>(c >> 8),
+            static_cast<uint8_t>(c),
+            0xFF,
+        };
     }
-};
+    return palette;
+}();
 
 #endif //NES_EMU_PALETTE_H

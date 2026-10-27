@@ -1,48 +1,48 @@
 #include "APU.h"
 
-APU::APU() {
+#include "Console.h"
+#include "CPU.h"
+
+// APU
+
+APU::APU(Console *console) {
     this->console = console;
     this->noise.shiftRegister = 1;
     this->pulse1.channel = 1;
     this->pulse2.channel = 2;
     this->framePeriod = 4;
     this->dmc.cpu = console->cpu;
-
-    for (size_t i = 0; i < 31; i++) {
-        pulseTable[i] = 95.52 / (8128.0 / static_cast<float>(i) + 100);
-    }
-    for (size_t i = 0; i < 203; i++) {
-        tndTable[i] = 163.67 / (24329.0 / static_cast<float>(i) + 100);
-    }
 }
 
 void APU::step() {
-    const auto cycle1 = this->cycle;
+    const uint64_t cycle1 = this->cycle;
     this->cycle++;
-    const auto cycle2 = this->cycle;
+    const uint64_t cycle2 = this->cycle;
     this->stepTimer();
-    const auto f1 = static_cast<int>(static_cast<double>(cycle1) / frameCounterRate);
-    const auto f2 = static_cast<int>(static_cast<double>(cycle2) / frameCounterRate);
+    const auto f1 = static_cast<int64_t>(static_cast<double>(cycle1) / frameCounterRate);
+    const auto f2 = static_cast<int64_t>(static_cast<double>(cycle2) / frameCounterRate);
     if (f1 != f2) {
         this->stepFrameCounter();
     }
-    const auto s1 = static_cast<int>(static_cast<double>(cycle1) / this->sampleRate);
-    const auto s2 = static_cast<int>(static_cast<double>(cycle2) / this->sampleRate);
-    if (s1 != s2) {
-        this->sendSample();
+    // Go divides by a zero sampleRate here; casting the infinite result to an
+    // integer is undefined in C++, so skip samples until the rate is set
+    if (this->sampleRate > 0) {
+        const auto s1 = static_cast<int64_t>(static_cast<double>(cycle1) / this->sampleRate);
+        const auto s2 = static_cast<int64_t>(static_cast<double>(cycle2) / this->sampleRate);
+        if (s1 != s2) {
+            this->sendSample();
+        }
     }
 }
 
 void APU::sendSample() {
-    auto output = this->filterChain.Step(this->output());
-    // todo
-    // select {
-    // case this->channel <- output:
-    // default:
-    // }
+    const float sample = this->filterChain.Step(this->output());
+    if (this->channel) {
+        this->channel(sample);
+    }
 }
 
-float APU::output() {
+float APU::output() const {
     const auto p1 = this->pulse1.output();
     const auto p2 = this->pulse2.output();
     const auto t = this->triangle.output();
@@ -59,31 +59,42 @@ float APU::output() {
 //  - l - l    l - l - -    Length counter and sweep
 //  e e e e    e e e e -    Envelope and linear counter
 void APU::stepFrameCounter() {
-    if (this->framePeriod == 4) {
-        this->frameValue = (this->frameValue + 1) % 4;
-        if (this->frameValue == 0) {
-            this->stepEnvelope();
-        } else if (this->frameValue == 2) {
-            this->stepEnvelope();
-        } else if (this->frameValue == 1) {
-            this->stepEnvelope();
-            this->stepSweep();
-            this->stepLength();
-        } else if (this->frameValue == 3) {
-            this->stepEnvelope();
-            this->stepSweep();
-            this->stepLength();
-            this->fireIRQ();
-        }
-    } else if (this->framePeriod == 5) {
-        this->frameValue = (this->frameValue + 1) % 5;
-        if (this->frameValue == 0 || this->frameValue == 2) {
-            this->stepEnvelope();
-        } else if (this->frameValue == 1 || this->frameValue == 3) {
-            this->stepEnvelope();
-            this->stepSweep();
-            this->stepLength();
-        }
+    switch (this->framePeriod) {
+        case 4:
+            this->frameValue = (this->frameValue + 1) % 4;
+            switch (this->frameValue) {
+                case 0:
+                case 2:
+                    this->stepEnvelope();
+                    break;
+                case 1:
+                    this->stepEnvelope();
+                    this->stepSweep();
+                    this->stepLength();
+                    break;
+                case 3:
+                    this->stepEnvelope();
+                    this->stepSweep();
+                    this->stepLength();
+                    this->fireIRQ();
+                    break;
+            }
+            break;
+        case 5:
+            this->frameValue = (this->frameValue + 1) % 5;
+            switch (this->frameValue) {
+                case 0:
+                case 2:
+                    this->stepEnvelope();
+                    break;
+                case 1:
+                case 3:
+                    this->stepEnvelope();
+                    this->stepSweep();
+                    this->stepLength();
+                    break;
+            }
+            break;
     }
 }
 
@@ -123,10 +134,9 @@ void APU::fireIRQ() const {
 }
 
 uint8_t APU::readRegister(const uint16_t address) const {
-    if (address == 0x4015) {
-        return this->readStatus();
-        // default:
-        // 	log.Fatalf("unhandled apu register read at address: 0x%04X", address)
+    switch (address) {
+        case 0x4015:
+            return this->readStatus();
     }
     return 0;
 }
@@ -135,48 +145,72 @@ void APU::writeRegister(const uint16_t address, const uint8_t value) {
     switch (address) {
         case 0x4000:
             this->pulse1.writeControl(value);
+            break;
         case 0x4001:
             this->pulse1.writeSweep(value);
+            break;
         case 0x4002:
             this->pulse1.writeTimerLow(value);
+            break;
         case 0x4003:
             this->pulse1.writeTimerHigh(value);
+            break;
         case 0x4004:
             this->pulse2.writeControl(value);
+            break;
         case 0x4005:
             this->pulse2.writeSweep(value);
+            break;
         case 0x4006:
             this->pulse2.writeTimerLow(value);
+            break;
         case 0x4007:
             this->pulse2.writeTimerHigh(value);
+            break;
         case 0x4008:
             this->triangle.writeControl(value);
+            break;
         case 0x4009:
-        case 0x4010:
-            this->dmc.writeControl(value);
-        case 0x4011:
-            this->dmc.writeValue(value);
-        case 0x4012:
-            this->dmc.writeAddress(value);
-        case 0x4013:
-            this->dmc.writeLength(value);
+            // unused
+            break;
         case 0x400A:
             this->triangle.writeTimerLow(value);
+            break;
         case 0x400B:
             this->triangle.writeTimerHigh(value);
+            break;
         case 0x400C:
             this->noise.writeControl(value);
+            break;
         case 0x400D:
+            // unused
+            break;
         case 0x400E:
             this->noise.writePeriod(value);
+            break;
         case 0x400F:
             this->noise.writeLength(value);
+            break;
+        case 0x4010:
+            this->dmc.writeControl(value);
+            break;
+        case 0x4011:
+            this->dmc.writeValue(value);
+            break;
+        case 0x4012:
+            this->dmc.writeAddress(value);
+            break;
+        case 0x4013:
+            this->dmc.writeLength(value);
+            break;
         case 0x4015:
             this->writeControl(value);
+            break;
         case 0x4017:
             this->writeFrameCounter(value);
-        default: ;
-            // 	log.Fatalf("unhandled apu register write at address: 0x%04X", address)
+            break;
+        default:
+            break;
     }
 }
 
@@ -228,9 +262,9 @@ void APU::writeControl(const uint8_t value) {
 }
 
 void APU::writeFrameCounter(const uint8_t value) {
-    this->framePeriod = 4 + (value >> 7) & 1;
-    this->frameIRQ = (value >> 6 & 1) == 0;
-    // this->frameValue = 0
+    this->framePeriod = 4 + ((value >> 7) & 1);
+    this->frameIRQ = ((value >> 6) & 1) == 0;
+    // this->frameValue = 0;
     if (this->framePeriod == 5) {
         this->stepEnvelope();
         this->stepSweep();
@@ -238,21 +272,22 @@ void APU::writeFrameCounter(const uint8_t value) {
     }
 }
 
+// Pulse
+
 void Pulse::writeControl(const uint8_t value) {
     this->dutyMode = (value >> 6) & 3;
-    // todo
-    this->lengthEnabled = (value >> 5) & 1 == 0;
-    this->envelopeLoop = (value >> 5) & 1 == 1;
-    this->envelopeEnabled = (value >> 4) & 1 == 0;
+    this->lengthEnabled = ((value >> 5) & 1) == 0;
+    this->envelopeLoop = ((value >> 5) & 1) == 1;
+    this->envelopeEnabled = ((value >> 4) & 1) == 0;
     this->envelopePeriod = value & 15;
     this->constantVolume = value & 15;
     this->envelopeStart = true;
 }
 
 void Pulse::writeSweep(const uint8_t value) {
-    this->sweepEnabled = (value >> 7) & 1 == 1;
-    this->sweepPeriod = (value >> 4) & 7 + 1;
-    this->sweepNegate = (value >> 3) & 1 == 1;
+    this->sweepEnabled = ((value >> 7) & 1) == 1;
+    this->sweepPeriod = ((value >> 4) & 7) + 1;
+    this->sweepNegate = ((value >> 3) & 1) == 1;
     this->sweepShift = value & 7;
     this->sweepReload = true;
 }
@@ -318,7 +353,7 @@ void Pulse::stepLength() {
 }
 
 void Pulse::sweep() {
-    const auto delta = this->timerPeriod >> this->sweepShift;
+    const uint16_t delta = this->timerPeriod >> this->sweepShift;
     if (this->sweepNegate) {
         this->timerPeriod -= delta;
         if (this->channel == 1) {
@@ -342,14 +377,16 @@ uint8_t Pulse::output() const {
     if (this->timerPeriod < 8 || this->timerPeriod > 0x7FF) {
         return 0;
     }
-    // if !p.sweepNegate && p.timerPeriod+(p.timerPeriod>>p.sweepShift) > 0x7FF {
-    // 	return 0
+    // if (!this->sweepNegate && this->timerPeriod + (this->timerPeriod >> this->sweepShift) > 0x7FF) {
+    //     return 0;
     // }
     if (this->envelopeEnabled) {
         return this->envelopeVolume;
     }
     return this->constantVolume;
 }
+
+// Triangle
 
 void Triangle::writeControl(const uint8_t value) {
     this->lengthEnabled = ((value >> 7) & 1) == 0;
@@ -411,10 +448,12 @@ uint8_t Triangle::output() const {
     return triangleTable[this->dutyValue];
 }
 
+// Noise
+
 void Noise::writeControl(const uint8_t value) {
-    this->lengthEnabled = (value >> 5 & 1) == 0;
-    this->envelopeLoop = (value >> 5 & 1) == 1;
-    this->envelopeEnabled = (value >> 4 & 1) == 0;
+    this->lengthEnabled = ((value >> 5) & 1) == 0;
+    this->envelopeLoop = ((value >> 5) & 1) == 1;
+    this->envelopeEnabled = ((value >> 4) & 1) == 0;
     this->envelopePeriod = value & 15;
     this->constantVolume = value & 15;
     this->envelopeStart = true;
@@ -433,14 +472,9 @@ void Noise::writeLength(const uint8_t value) {
 void Noise::stepTimer() {
     if (this->timerValue == 0) {
         this->timerValue = this->timerPeriod;
-        uint8_t shift;
-        if (this->mode) {
-            shift = 6;
-        } else {
-            shift = 1;
-        }
+        const uint8_t shift = this->mode ? 6 : 1;
         const auto b1 = this->shiftRegister & 1;
-        const auto b2 = this->shiftRegister >> shift & 1;
+        const auto b2 = (this->shiftRegister >> shift) & 1;
         this->shiftRegister >>= 1;
         this->shiftRegister |= (b1 ^ b2) << 14;
     } else {
@@ -487,6 +521,8 @@ uint8_t Noise::output() const {
     return this->constantVolume;
 }
 
+// DMC
+
 void DMC::writeControl(const uint8_t value) {
     this->irq = (value & 0x80) == 0x80;
     this->loop = (value & 0x40) == 0x40;
@@ -499,12 +535,12 @@ void DMC::writeValue(const uint8_t value) {
 
 void DMC::writeAddress(const uint8_t value) {
     // Sample address = %11AAAAAA.AA000000
-    this->sampleAddress = 0xC000 | (uint16_t(value) << 6);
+    this->sampleAddress = 0xC000 | (static_cast<uint16_t>(value) << 6);
 }
 
 void DMC::writeLength(const uint8_t value) {
     // Sample length = %0000LLLL.LLLL0001
-    this->sampleLength = (uint16_t(value) << 4) | 1;
+    this->sampleLength = (static_cast<uint16_t>(value) << 4) | 1;
 }
 
 void DMC::restart() {

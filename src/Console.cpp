@@ -1,18 +1,30 @@
-
 #include "Console.h"
 
+#include <cstdint>
+#include <utility>
 
-Console::Console(std::string const& path) {
+#include "ines.h"
 
+Console::Console(std::string const &path) {
     cartridge = LoadNESFile(path);
-    // ram = make([]byte, 2048)
-    ram = new Ram();
+    ram = new Ram(this);
     controller1 = new Controller();
     controller2 = new Controller();
-    mapper = new Mapper();
-    cpu = new CPU();
-    apu = new APU();
-    ppu = new PPU();
+    mapper = NewMapper(this);
+    cpu = new CPU(ram);
+    apu = new APU(this);
+    ppu = new PPU(this);
+}
+
+Console::~Console() {
+    delete ppu;
+    delete apu;
+    delete cpu;
+    delete mapper;
+    delete controller2;
+    delete controller1;
+    delete ram;
+    delete cartridge;
 }
 
 void Console::reset() {
@@ -20,8 +32,8 @@ void Console::reset() {
 }
 
 int Console::step() {
-    const auto cpuCycles = cpu->step();
-    const auto ppuCycles = cpuCycles * 3;
+    const int cpuCycles = cpu->step();
+    const int ppuCycles = cpuCycles * 3;
     for (int i = 0; i < ppuCycles; i++) {
         ppu->step();
         mapper->step();
@@ -33,38 +45,52 @@ int Console::step() {
 }
 
 int Console::stepFrame() {
-    auto cpuCycles = 0;
-    unsigned long long frame = ppu->frame;
+    int cpuCycles = 0;
+    const uint64_t frame = ppu->frame;
     while (frame == ppu->frame) {
         cpuCycles += step();
     }
     return cpuCycles;
 }
 
-void Console::stepSeconds(double seconds) {
-    // cpu frequency
-    auto cycles = 1789773 * seconds * 1000;
+void Console::stepSeconds(const double seconds) {
+    auto cycles = static_cast<int64_t>(CPUFrequency * seconds);
     while (cycles > 0) {
         cycles -= step();
     }
 }
 
 PPU::Buffer *Console::buffer() {
-    return &ppu->front;
+    return ppu->front.get();
 }
 
-PPU::Buffer *Console::backgroundColor() {
-    return Palette[ppu->readPalette(0)%64];
+Color Console::backgroundColor() const {
+    return Palette[ppu->readPalette(0) % 64];
 }
 
-void Console::setButtons1(char buttons) {}
+void Console::setButtons1(const std::array<bool, 8> &buttons) {
+    controller1->setButtons(buttons);
+}
 
-void Console::setButtons2(char buttons) {}
+void Console::setButtons2(const std::array<bool, 8> &buttons) {
+    controller2->setButtons(buttons);
+}
 
-void Console::setAudioChannel() {}
+void Console::setAudioChannel(std::function<void(float)> channel) {
+    apu->channel = std::move(channel);
+}
 
-void Console::setAudioSampleRate(long long sampleRate) {}
-
-void Console::saveState(std::string filename) {}
-
-void Console::loadState(std::string filename) {}
+void Console::setAudioSampleRate(const double sampleRate) {
+    if (sampleRate != 0) {
+        // Convert samples per second to cpu steps per sample
+        apu->sampleRate = CPUFrequency / sampleRate;
+        // Initialize filters
+        apu->filterChain = FilterChain{
+            HighPassFilter(static_cast<float>(sampleRate), 90),
+            HighPassFilter(static_cast<float>(sampleRate), 440),
+            LowPassFilter(static_cast<float>(sampleRate), 14000),
+        };
+    } else {
+        apu->filterChain = FilterChain{};
+    }
+}

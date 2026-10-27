@@ -1,41 +1,32 @@
 #ifndef RAM_H
 #define RAM_H
+#include <cstdint>
 
-#include <iostream>
-
-class PPU;
-class APU;
-class Controller;
-class Mapper;
 class Console;
 
+// Ram is the console's 2KB of RAM plus the CPU and PPU memory maps: Go's
+// Console.RAM, cpuMemory and ppuMemory in one. It's created before the parts it
+// talks to, so it finds them through the console each time it needs them.
 class Ram {
 public:
-    PPU *ppu;
-    APU *apu;
-    Controller *controller1;
-    Controller *controller2;
-    Mapper *mapper;
-    Console *console;
+    Console *console{};
+    uint8_t RAM[2048]{};
 
-    Ram(PPU *ppu, APU *apu, Controller *controller1, Controller *controller2, Mapper *mapper, Console *console) {
-        this->ppu = ppu;
-        this->apu = apu;
-        this->controller1 = controller1;
-        this->controller2 = controller2;
-        this->mapper = mapper;
-        this->console = console;
-    }
+    explicit Ram(Console *console);
 
-    uint8_t read(const uint16_t address) const;
+    // CPU Memory Map
 
-    void write(const uint16_t address, const uint8_t value);
+    uint8_t read(uint16_t address) const;
 
-    uint8_t ReadPpuMemory(uint16_t address);
+    void write(uint16_t address, uint8_t value);
 
-    void WritePpuMemory(uint16_t address, const uint8_t value);
+    // PPU Memory Map
 
-    uint16_t MirrorAddress(uint8_t mode, uint16_t address);
+    uint8_t ReadPpuMemory(uint16_t address) const;
+
+    void WritePpuMemory(uint16_t address, uint8_t value) const;
+
+    static uint16_t MirrorAddress(uint8_t mode, uint16_t address);
 };
 
 #endif //RAM_H

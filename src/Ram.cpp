@@ -1,24 +1,8 @@
 #include "Ram.h"
 
-#include <cstdint>
-#include <print>
-
-#include "APU.h"
 #include "Console.h"
-#include "Controller.h"
-#include "Mapper.h"
-#include "PPU.h"
 
-uint8_t ram[2048] = {};
-
-enum {
-    MirrorHorizontal,
-    MirrorVertical,
-    MirrorSingle0,
-    MirrorSingle1,
-    MirrorFour
-};
-
+// indexed by Cartridge::mirror, then by which of the four nametables is addressed
 static constexpr uint16_t MirrorLookup[5][4] = {
     {0, 0, 1, 1},
     {0, 1, 0, 1},
@@ -27,94 +11,86 @@ static constexpr uint16_t MirrorLookup[5][4] = {
     {0, 1, 2, 3},
 };
 
+Ram::Ram(Console *console) : console{console} {
+}
+
 uint8_t Ram::read(const uint16_t address) const {
     if (address < 0x2000) {
-        return ram[address % 0x0800];
+        return RAM[address % 0x0800];
     }
     if (address < 0x4000) {
-        return ppu->readRegister(0x2000 + address % 8);
+        return console->ppu->readRegister(0x2000 + address % 8);
     }
     if (address == 0x4014) {
-        return ppu->readRegister(address);
+        return console->ppu->readRegister(address);
     }
     if (address == 0x4015) {
-        return apu->readRegister(address);
+        return console->apu->readRegister(address);
     }
     if (address == 0x4016) {
-        return controller1->read();
+        return console->controller1->read();
     }
     if (address == 0x4017) {
-        return controller2->read();
+        return console->controller2->read();
     }
     if (address < 0x6000) {
         // TODO: I/O registers
         return 0;
     }
-    if (address >= 0x6000) {
-        return mapper->read(address);
-    }
-    std::cout << "unhandled cpu memory read at address: " << address << std::endl;
-    return 0;
+    return console->mapper->read(address);
 }
 
 void Ram::write(const uint16_t address, const uint8_t value) {
     if (address < 0x2000) {
-        ram[address % 0x0800] = value;
+        RAM[address % 0x0800] = value;
     } else if (address < 0x4000) {
-        ppu->writeRegister(0x2000 + address % 8, value);
+        console->ppu->writeRegister(0x2000 + address % 8, value);
     } else if (address < 0x4014) {
-        apu->writeRegister(address, value);
+        console->apu->writeRegister(address, value);
     } else if (address == 0x4014) {
-        ppu->writeRegister(address, value);
+        console->ppu->writeRegister(address, value);
     } else if (address == 0x4015) {
-        apu->writeRegister(address, value);
+        console->apu->writeRegister(address, value);
     } else if (address == 0x4016) {
-        controller1->write(value);
-        controller2->write(value);
+        console->controller1->write(value);
+        console->controller2->write(value);
     } else if (address == 0x4017) {
-        apu->writeRegister(address, value);
+        console->apu->writeRegister(address, value);
     } else if (address < 0x6000) {
-    } else if (address >= 0x6000) {
-        mapper->write(address, value);
+        // TODO: I/O registers
     } else {
-        std::cout << "unhandled cpu memory write at address: " << address << std::endl;
+        console->mapper->write(address, value);
     }
 }
 
-uint8_t Ram::ReadPpuMemory(uint16_t address) {
+uint8_t Ram::ReadPpuMemory(uint16_t address) const {
     address = address % 0x4000;
     if (address < 0x2000) {
-        return mapper->read(address);
+        return console->mapper->read(address);
     }
     if (address < 0x3F00) {
-        int mode = console->cartridge.mirror;
-        return ppu->nameTableData[MirrorAddress(mode, address) % 2048];
+        const uint8_t mode = console->cartridge->mirror;
+        return console->ppu->nameTableData[MirrorAddress(mode, address) % 2048];
     }
-    if (address < 0x4000) {
-        return ppu->readPalette(address % 32);
-    }
-    std::println("unhandled ppu memory read at address: {}", address);
-    return 0;
+    return console->ppu->readPalette(address % 32);
 }
 
-void Ram::WritePpuMemory(uint16_t address, const uint8_t value) {
+void Ram::WritePpuMemory(uint16_t address, const uint8_t value) const {
     address = address % 0x4000;
-
     if (address < 0x2000) {
-        mapper->write(address, value);
+        console->mapper->write(address, value);
     } else if (address < 0x3F00) {
-        const int mode = console->cartridge.mirror;
-        ppu->nameTableData[MirrorAddress(mode, address) % 2048] = value;
-    } else if (address < 0x4000) {
-        ppu->writePalette(address % 32, value);
+        const uint8_t mode = console->cartridge->mirror;
+        console->ppu->nameTableData[MirrorAddress(mode, address) % 2048] = value;
     } else {
-        std::println("unhandled ppu memory write at address: {}", address);
+        console->ppu->writePalette(address % 32, value);
     }
 }
 
-uint16_t Ram::MirrorAddress(uint8_t mode, uint16_t address) {
-    const int address_div = (address - 0x2000) % 0x1000;
-    const int table = address_div / 0x0400;
-    const int offset = address_div % 0x0400;
+uint16_t Ram::MirrorAddress(const uint8_t mode, uint16_t address) {
+    // Go subtracts in uint16, so this wraps instead of going negative
+    address = static_cast<uint16_t>(address - 0x2000) % 0x1000;
+    const uint16_t table = address / 0x0400;
+    const uint16_t offset = address % 0x0400;
     return 0x2000 + MirrorLookup[mode][table] * 0x0400 + offset;
 }

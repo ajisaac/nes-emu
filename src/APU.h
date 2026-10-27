@@ -1,11 +1,14 @@
 #ifndef NES_EMU_APU_H
 #define NES_EMU_APU_H
+#include <array>
 #include <cstdint>
+#include <functional>
 
-#include "Console.h"
+#include "CPU.h"
 #include "Filter.h"
 
-constexpr int CPUFrequency = 1789773;
+class Console;
+
 constexpr double frameCounterRate = CPUFrequency / 240.0;
 
 constexpr uint8_t lengthTable[32]{
@@ -33,125 +36,46 @@ constexpr uint8_t dmcTable[16]{
     214, 190, 170, 160, 143, 127, 113, 107, 95, 80, 71, 64, 53, 42, 36, 27
 };
 
-class CPU;
+// entry 0 of both mixer tables stays 0, which Go gets to by dividing by zero
+constexpr std::array<float, 31> pulseTable = [] {
+    std::array<float, 31> table{};
+    for (size_t i = 1; i < table.size(); i++) {
+        table[i] = 95.52f / (8128.0f / static_cast<float>(i) + 100);
+    }
+    return table;
+}();
 
-class DMC {
-public:
-    CPU *cpu;
-    bool enabled;
-    uint8_t value;
-    uint16_t sampleAddress;
-    uint16_t sampleLength;
-    uint16_t currentAddress;
-    uint16_t currentLength;
-    uint8_t shiftRegister;
-    uint8_t bitCount;
-    uint8_t tickPeriod;
-    uint8_t tickValue;
-    bool loop;
-    bool irq;
-
-    void writeControl(uint8_t value);
-
-    void writeValue(uint8_t value);
-
-    void writeAddress(uint8_t value);
-
-    void writeLength(uint8_t value);
-
-    void restart();
-
-    void stepTimer();
-
-    void stepReader();
-
-    void stepShifter();
-
-    uint8_t output() const;
-};
-
-class Noise {
-public:
-    uint16_t shiftRegister;
-    bool enabled;
-    bool mode;
-    bool lengthEnabled;
-    uint8_t lengthValue;
-    uint16_t timerPeriod;
-    uint16_t timerValue;
-    bool envelopeEnabled;
-    bool envelopeLoop;
-    bool envelopeStart;
-    uint8_t envelopePeriod;
-    uint8_t envelopeValue;
-    uint8_t envelopeVolume;
-    uint8_t constantVolume;
-
-    void writeControl(uint8_t value);
-
-    void writePeriod(uint8_t value);
-
-    void writeLength(uint8_t value);
-
-    void stepTimer();
-
-    void stepEnvelope();
-
-    void stepLength();
-
-    uint8_t output() const;
-};
-
-class Triangle {
-public:
-    bool enabled;
-    bool lengthEnabled;
-    uint8_t lengthValue;
-    uint16_t timerPeriod;
-    uint16_t timerValue;
-    uint8_t dutyValue;
-    uint8_t counterPeriod;
-    uint8_t counterValue;
-    bool counterReload;
-
-    void writeControl(uint8_t value);
-
-    void writeTimerLow(uint8_t value);
-
-    void writeTimerHigh(uint8_t value);
-
-    void stepTimer();
-
-    void stepLength();
-
-    void stepCounter();
-
-    uint8_t output() const;
-};
+constexpr std::array<float, 203> tndTable = [] {
+    std::array<float, 203> table{};
+    for (size_t i = 1; i < table.size(); i++) {
+        table[i] = 163.67f / (24329.0f / static_cast<float>(i) + 100);
+    }
+    return table;
+}();
 
 class Pulse {
 public:
-    uint8_t channel;
-    bool enabled;
-    bool lengthEnabled;
-    uint8_t lengthValue;
-    uint16_t timerPeriod;
-    uint16_t timerValue;
-    uint8_t dutyMode;
-    uint8_t dutyValue;
-    bool sweepReload;
-    bool sweepEnabled;
-    bool sweepNegate;
-    uint8_t sweepShift;
-    uint8_t sweepPeriod;
-    uint8_t sweepValue;
-    bool envelopeEnabled;
-    bool envelopeLoop;
-    bool envelopeStart;
-    uint8_t envelopePeriod;
-    uint8_t envelopeValue;
-    uint8_t envelopeVolume;
-    uint8_t constantVolume;
+    bool enabled{};
+    uint8_t channel{};
+    bool lengthEnabled{};
+    uint8_t lengthValue{};
+    uint16_t timerPeriod{};
+    uint16_t timerValue{};
+    uint8_t dutyMode{};
+    uint8_t dutyValue{};
+    bool sweepReload{};
+    bool sweepEnabled{};
+    bool sweepNegate{};
+    uint8_t sweepShift{};
+    uint8_t sweepPeriod{};
+    uint8_t sweepValue{};
+    bool envelopeEnabled{};
+    bool envelopeLoop{};
+    bool envelopeStart{};
+    uint8_t envelopePeriod{};
+    uint8_t envelopeValue{};
+    uint8_t envelopeVolume{};
+    uint8_t constantVolume{};
 
     void writeControl(uint8_t value);
 
@@ -174,33 +98,123 @@ public:
     uint8_t output() const;
 };
 
+class Triangle {
+public:
+    bool enabled{};
+    bool lengthEnabled{};
+    uint8_t lengthValue{};
+    uint16_t timerPeriod{};
+    uint16_t timerValue{};
+    uint8_t dutyValue{};
+    uint8_t counterPeriod{};
+    uint8_t counterValue{};
+    bool counterReload{};
+
+    void writeControl(uint8_t value);
+
+    void writeTimerLow(uint8_t value);
+
+    void writeTimerHigh(uint8_t value);
+
+    void stepTimer();
+
+    void stepLength();
+
+    void stepCounter();
+
+    uint8_t output() const;
+};
+
+class Noise {
+public:
+    bool enabled{};
+    bool mode{};
+    uint16_t shiftRegister{};
+    bool lengthEnabled{};
+    uint8_t lengthValue{};
+    uint16_t timerPeriod{};
+    uint16_t timerValue{};
+    bool envelopeEnabled{};
+    bool envelopeLoop{};
+    bool envelopeStart{};
+    uint8_t envelopePeriod{};
+    uint8_t envelopeValue{};
+    uint8_t envelopeVolume{};
+    uint8_t constantVolume{};
+
+    void writeControl(uint8_t value);
+
+    void writePeriod(uint8_t value);
+
+    void writeLength(uint8_t value);
+
+    void stepTimer();
+
+    void stepEnvelope();
+
+    void stepLength();
+
+    uint8_t output() const;
+};
+
+class DMC {
+public:
+    CPU *cpu{};
+    bool enabled{};
+    uint8_t value{};
+    uint16_t sampleAddress{};
+    uint16_t sampleLength{};
+    uint16_t currentAddress{};
+    uint16_t currentLength{};
+    uint8_t shiftRegister{};
+    uint8_t bitCount{};
+    uint8_t tickPeriod{};
+    uint8_t tickValue{};
+    bool loop{};
+    bool irq{};
+
+    void writeControl(uint8_t value);
+
+    void writeValue(uint8_t value);
+
+    void writeAddress(uint8_t value);
+
+    void writeLength(uint8_t value);
+
+    void restart();
+
+    void stepTimer();
+
+    void stepReader();
+
+    void stepShifter();
+
+    uint8_t output() const;
+};
+
 class APU {
 public:
-    APU();
-    static float pulseTable[31];
-    static float tndTable[203];
-
-    // APU
-    Console *console;
-    float channel; // chan float channel
-    double sampleRate;
+    Console *console{};
+    std::function<void(float)> channel; // receives each audio sample, in place of Go's chan float32
+    double sampleRate{};                // cpu cycles per audio sample, 0 until the console sets it
     Pulse pulse1;
     Pulse pulse2;
     Triangle triangle;
     Noise noise;
     DMC dmc;
-    uint64_t cycle;
-    uint8_t framePeriod;
-    uint8_t frameValue;
-    bool frameIRQ;
+    uint64_t cycle{};
+    uint8_t framePeriod{};
+    uint8_t frameValue{};
+    bool frameIRQ{};
     FilterChain filterChain;
 
+    explicit APU(Console *console);
 
     void step();
 
     void sendSample();
 
-    float output();
+    float output() const;
 
     // mode 0:    mode 1:       function
     // ---------  -----------  -----------------------------
@@ -229,6 +243,5 @@ public:
 
     void writeFrameCounter(uint8_t value);
 };
-
 
 #endif //NES_EMU_APU_H

@@ -1,21 +1,23 @@
 #ifndef CPPTEST_CPU_H
 #define CPPTEST_CPU_H
-#include <string>
+#include <cstdint>
 
 class Ram;
+
+constexpr int CPUFrequency = 1789773;
 
 class CPU {
 public:
     // interrupt types
-    enum interupt_types {
-        interruptNone,
+    enum : uint8_t {
+        interruptNone = 1,
         interruptNMI,
         interruptIRQ
     };
 
-    // addressing modes
-    enum addressing_mode {
-        modeAbsolute,
+    // addressing modes, numbered from 1 like Go's iota so they match instructionModes
+    enum : uint8_t {
+        modeAbsolute = 1,
         modeAbsoluteX,
         modeAbsoluteY,
         modeAccumulator,
@@ -31,7 +33,7 @@ public:
     };
 
     // instructionModes indicates the addressing mode for each instruction
-    char instructionModes[256] = {
+    static constexpr uint8_t instructionModes[256] = {
         6, 7, 6, 7, 11, 11, 11, 11, 6, 5, 4, 5, 1, 1, 1, 1,
         10, 9, 6, 9, 12, 12, 12, 12, 6, 3, 6, 3, 2, 2, 2, 2,
         1, 7, 6, 7, 11, 11, 11, 11, 6, 5, 4, 5, 1, 1, 1, 1,
@@ -51,7 +53,7 @@ public:
     };
 
     // instructionSizes indicates the size of each instruction in bytes
-    char instructionSizes[256] = {
+    static constexpr uint8_t instructionSizes[256] = {
         2, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
         2, 2, 0, 0, 2, 2, 2, 0, 1, 3, 1, 0, 3, 3, 3, 0,
         3, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
@@ -72,7 +74,7 @@ public:
 
     // instructionCycles indicates the number of cycles used by each instruction,
     // not including conditional cycles
-    char instructionCycles[256] = {
+    static constexpr uint8_t instructionCycles[256] = {
         7, 6, 2, 8, 3, 3, 5, 5, 3, 2, 2, 2, 4, 4, 6, 6,
         2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
         6, 6, 2, 8, 3, 3, 5, 5, 4, 2, 2, 2, 4, 4, 6, 6,
@@ -93,7 +95,7 @@ public:
 
     // instructionPageCycles indicates the number of cycles used by each
     // instruction when a page is crossed
-    char instructionPageCycles[256] = {
+    static constexpr uint8_t instructionPageCycles[256] = {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -113,7 +115,7 @@ public:
     };
 
     // instructionNames indicates the name of each instruction
-    std::string instructionNames[256] = {
+    static constexpr const char *instructionNames[256] = {
         "BRK", "ORA", "KIL", "SLO", "NOP", "ORA", "ASL", "SLO",
         "PHP", "ORA", "ASL", "ANC", "NOP", "ORA", "ASL", "SLO",
         "BPL", "ORA", "KIL", "SLO", "NOP", "ORA", "ASL", "SLO",
@@ -148,96 +150,99 @@ public:
         "SED", "SBC", "NOP", "ISC", "NOP", "SBC", "INC", "ISC",
     };
 
+    Ram *ram{};                       // memory interface
+    uint64_t Cycles{};                // number of cycles
+    uint16_t PC{};                    // program counter
+    uint8_t SP{};                     // stack pointer
+    uint8_t A{};                      // accumulator
+    uint8_t X{};                      // x register
+    uint8_t Y{};                      // y register
+    uint8_t C{};                      // carry flag
+    uint8_t Z{};                      // zero flag
+    uint8_t I{};                      // interrupt disable flag
+    uint8_t D{};                      // decimal mode flag
+    uint8_t B{};                      // break command flag
+    uint8_t U{};                      // unused flag
+    uint8_t V{};                      // overflow flag
+    uint8_t N{};                      // negative flag
+    uint8_t interrupt{interruptNone}; // interrupt type to perform
+    int stall{};                      // number of cycles to stall
 
-    const int CPUFrequency = 1789773;
+    // stepInfo contains information that the instruction functions use
+    struct stepInfo {
+        uint16_t address;
+        uint16_t pc;
+        uint8_t mode;
+    };
 
-    Ram *ram;
-    long Cycles{}; // number of cycles
-    short PC{}; // program counter
-    char SP{}; // stack pointer
-    char A{}; // accumulator
-    char X{}; // x register
-    char Y{}; // y register
-    char C{}; // carry flag
-    char Z{}; // zero flag
-    char I{}; // interrupt disable flag
-    char D{}; // decimal mode flag
-    char B{}; // break command flag
-    char U{}; // unused flag
-    char V{}; // overflow flag
-    char N{}; // negative flag
-    int stall{}; // number of cycles to stall
+    using Instruction = void (CPU::*)(const stepInfo &info);
 
-    // interrupt type to perform
-    interupt_types interrupt{interruptNone};
+    // table holds the function for each instruction
+    static const Instruction table[256];
 
-    explicit CPU(Ram *pRam);
+    explicit CPU(Ram *ram);
 
-    short Read(short address);
+    uint8_t Read(uint16_t address);
 
-    void Write(short address, char byte);
+    void Write(uint16_t address, uint8_t value);
 
     // Reset resets the CPU to its initial powerup state
     void Reset();
 
-    // Step executes a single CPU instruction
-    int step();
+    // PrintInstruction prints the current CPU state
+    void PrintInstruction();
 
     // pagesDiffer returns true if the two addresses reference different pages
-    bool pagesDiffer(short a, short b);
-
-    // stepInfo contains information that the instruction functions use
-    struct stepInfo {
-        short address;
-        short pc;
-        char mode;
-    };
+    static bool pagesDiffer(uint16_t a, uint16_t b);
 
     // addBranchCycles adds a cycle for taking a branch and adds another cycle
     // if the branch jumps to a new page
-    void addBranchCycles(stepInfo info);
+    void addBranchCycles(const stepInfo &info);
 
-    void compare(char a, char b);
+    void compare(uint8_t a, uint8_t b);
 
     // Read16 reads two bytes using Read to return a double-word value
-    short Read16(short address);
+    uint16_t Read16(uint16_t address);
 
     // read16bug emulates a 6502 bug that caused the low byte to wrap without
     // incrementing the high byte
-    short read16bug(short address);
+    uint16_t read16bug(uint16_t address);
 
     // push pushes a byte onto the stack
-    void push(char value);
+    void push(uint8_t value);
 
     // pull pops a byte from the stack
-    char pull();
+    uint8_t pull();
 
     // push16 pushes two bytes onto the stack
-    void push16(short value);
+    void push16(uint16_t value);
 
     // pull16 pops two bytes from the stack
-    short pull16();
+    uint16_t pull16();
 
     // Flags returns the processor status flags
-    char Flags();
+    uint8_t Flags() const;
 
     // SetFlags sets the processor status flags
-    void SetFlags(char flags);
+    void SetFlags(uint8_t flags);
 
     // setZ sets the zero flag if the argument is zero
-    void setZ(char value);
+    void setZ(uint8_t value);
 
     // setN sets the negative flag if the argument is negative (high bit is set)
-    void setN(char value);
+    void setN(uint8_t value);
 
     // setZN sets the zero flag and the negative flag
-    void setZN(char value);
+    void setZN(uint8_t value);
 
     // triggerNMI causes a non-maskable interrupt to occur on the next cycle
     void triggerNMI();
 
     // triggerIRQ causes an IRQ interrupt to occur on the next cycle
     void triggerIRQ();
+
+    // step executes a single CPU instruction
+    int step();
 
     // NMI - Non-Maskable Interrupt
     void nmi();
@@ -246,214 +251,212 @@ public:
     void irq();
 
     // ADC - Add with Carry
-    void adc(stepInfo info);
+    void adc(const stepInfo &info);
 
-    // AND - Logical AND
-    void AND(stepInfo info);
+    // AND - Logical AND (and is a reserved word in C++)
+    void AND(const stepInfo &info);
 
     // ASL - Arithmetic Shift Left
-    void asl(stepInfo info);
+    void asl(const stepInfo &info);
 
     // BCC - Branch if Carry Clear
-    void bcc(stepInfo info);
+    void bcc(const stepInfo &info);
 
     // BCS - Branch if Carry Set
-    void bcs(stepInfo info);
+    void bcs(const stepInfo &info);
 
     // BEQ - Branch if Equal
-    void beq(stepInfo info);
+    void beq(const stepInfo &info);
 
     // BIT - Bit Test
-    void bit(stepInfo info);
+    void bit(const stepInfo &info);
 
     // BMI - Branch if Minus
-    void bmi(stepInfo info);
+    void bmi(const stepInfo &info);
 
     // BNE - Branch if Not Equal
-    void bne(stepInfo info);
+    void bne(const stepInfo &info);
 
     // BPL - Branch if Positive
-    void bpl(stepInfo info);
+    void bpl(const stepInfo &info);
 
     // BRK - Force Interrupt
-    void brk(stepInfo info);
+    void brk(const stepInfo &info);
 
     // BVC - Branch if Overflow Clear
-    void bvc(stepInfo info);
+    void bvc(const stepInfo &info);
 
     // BVS - Branch if Overflow Set
-    void bvs(stepInfo info);
+    void bvs(const stepInfo &info);
 
     // CLC - Clear Carry Flag
-    void clc(stepInfo info);
+    void clc(const stepInfo &info);
 
     // CLD - Clear Decimal Mode
-    void cld(stepInfo info);
+    void cld(const stepInfo &info);
 
     // CLI - Clear Interrupt Disable
-    void cli(stepInfo info);
+    void cli(const stepInfo &info);
 
     // CLV - Clear Overflow Flag
-    void clv(stepInfo info);
+    void clv(const stepInfo &info);
 
     // CMP - Compare
-    void cmp(stepInfo info);
+    void cmp(const stepInfo &info);
 
     // CPX - Compare X Register
-    void cpx(stepInfo info);
+    void cpx(const stepInfo &info);
 
     // CPY - Compare Y Register
-    void cpy(stepInfo info);
+    void cpy(const stepInfo &info);
 
     // DEC - Decrement Memory
-    void dec(stepInfo info);
+    void dec(const stepInfo &info);
 
     // DEX - Decrement X Register
-    void dex(stepInfo info);
+    void dex(const stepInfo &info);
 
     // DEY - Decrement Y Register
-    void dey(stepInfo info);
+    void dey(const stepInfo &info);
 
     // EOR - Exclusive OR
-    void eor(stepInfo info);
+    void eor(const stepInfo &info);
 
     // INC - Increment Memory
-    void inc(stepInfo info);
+    void inc(const stepInfo &info);
 
     // INX - Increment X Register
-    void inx(stepInfo info);
+    void inx(const stepInfo &info);
 
     // INY - Increment Y Register
-    void iny(stepInfo info);
+    void iny(const stepInfo &info);
 
     // JMP - Jump
-    void jmp(stepInfo info);
+    void jmp(const stepInfo &info);
 
     // JSR - Jump to Subroutine
-    void jsr(stepInfo info);
+    void jsr(const stepInfo &info);
 
     // LDA - Load Accumulator
-    void lda(stepInfo info);
+    void lda(const stepInfo &info);
 
     // LDX - Load X Register
-    void ldx(stepInfo info);
+    void ldx(const stepInfo &info);
 
     // LDY - Load Y Register
-    void ldy(stepInfo info);
+    void ldy(const stepInfo &info);
 
     // LSR - Logical Shift Right
-    void lsr(stepInfo info);
+    void lsr(const stepInfo &info);
 
     // NOP - No Operation
-    void nop(stepInfo info);
+    void nop(const stepInfo &info);
 
     // ORA - Logical Inclusive OR
-    void ora(stepInfo info);
+    void ora(const stepInfo &info);
 
     // PHA - Push Accumulator
-    void pha(stepInfo info);
+    void pha(const stepInfo &info);
 
     // PHP - Push Processor Status
-    void php(stepInfo info);
-
-    void php();
+    void php(const stepInfo &info);
 
     // PLA - Pull Accumulator
-    void pla(stepInfo info);
+    void pla(const stepInfo &info);
 
     // PLP - Pull Processor Status
-    void plp(stepInfo info);
+    void plp(const stepInfo &info);
 
     // ROL - Rotate Left
-    void rol(stepInfo info);
+    void rol(const stepInfo &info);
 
     // ROR - Rotate Right
-    void ror(stepInfo info);
+    void ror(const stepInfo &info);
 
     // RTI - Return from Interrupt
-    void rti(stepInfo info);
+    void rti(const stepInfo &info);
 
     // RTS - Return from Subroutine
-    void rts(stepInfo info);
+    void rts(const stepInfo &info);
 
     // SBC - Subtract with Carry
-    void sbc(stepInfo info);
+    void sbc(const stepInfo &info);
 
     // SEC - Set Carry Flag
-    void sec(stepInfo info);
+    void sec(const stepInfo &info);
 
     // SED - Set Decimal Flag
-    void sed(stepInfo info);
+    void sed(const stepInfo &info);
 
     // SEI - Set Interrupt Disable
-    void sei(stepInfo info);
+    void sei(const stepInfo &info);
 
     // STA - Store Accumulator
-    void sta(stepInfo info);
+    void sta(const stepInfo &info);
 
     // STX - Store X Register
-    void stx(stepInfo info);
+    void stx(const stepInfo &info);
 
     // STY - Store Y Register
-    void sty(stepInfo info);
+    void sty(const stepInfo &info);
 
     // TAX - Transfer Accumulator to X
-    void tax(stepInfo info);
+    void tax(const stepInfo &info);
 
     // TAY - Transfer Accumulator to Y
-    void tay(stepInfo info);
+    void tay(const stepInfo &info);
 
     // TSX - Transfer Stack Pointer to X
-    void tsx(stepInfo info);
+    void tsx(const stepInfo &info);
 
     // TXA - Transfer X to Accumulator
-    void txa(stepInfo info);
+    void txa(const stepInfo &info);
 
     // TXS - Transfer X to Stack Pointer
-    void txs(stepInfo info);
+    void txs(const stepInfo &info);
 
     // TYA - Transfer Y to Accumulator
-    void tya(stepInfo info);
+    void tya(const stepInfo &info);
 
     // illegal opcodes below
 
-    void ahx(stepInfo info);
+    void ahx(const stepInfo &info);
 
-    void alr(stepInfo info);
+    void alr(const stepInfo &info);
 
-    void anc(stepInfo info);
+    void anc(const stepInfo &info);
 
-    void arr(stepInfo info);
+    void arr(const stepInfo &info);
 
-    void axs(stepInfo info);
+    void axs(const stepInfo &info);
 
-    void dcp(stepInfo info);
+    void dcp(const stepInfo &info);
 
-    void isc(stepInfo info);
+    void isc(const stepInfo &info);
 
-    void kil(stepInfo info);
+    void kil(const stepInfo &info);
 
-    void las(stepInfo info);
+    void las(const stepInfo &info);
 
-    void lax(stepInfo info);
+    void lax(const stepInfo &info);
 
-    void rla(stepInfo info);
+    void rla(const stepInfo &info);
 
-    void rra(stepInfo info);
+    void rra(const stepInfo &info);
 
-    void sax(stepInfo info);
+    void sax(const stepInfo &info);
 
-    void shx(stepInfo info);
+    void shx(const stepInfo &info);
 
-    void shy(stepInfo info);
+    void shy(const stepInfo &info);
 
-    void slo(stepInfo info);
+    void slo(const stepInfo &info);
 
-    void sre(stepInfo info);
+    void sre(const stepInfo &info);
 
-    void tas(stepInfo info);
+    void tas(const stepInfo &info);
 
-    void xaa(stepInfo info);
+    void xaa(const stepInfo &info);
 };
 
 #endif  // CPPTEST_CPU_H

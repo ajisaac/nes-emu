@@ -1,21 +1,29 @@
 #include "PPU.h"
 
+#include <utility>
+
 #include "Console.h"
 
-PPU::PPU(Console *console) : front{Buffer{Rect{0, 0, 256, 240}}}, back{Buffer{Rect{0, 0, 256, 240}}} {
-    // ppu := PPU{Memory: NewPPUMemory(console), console: console};
-    this->console = console;
-    this->ram = &console->ram;
+void PPU::Buffer::SetRGBA(const int x, const int y, const Color c) {
+    const int i = (y * width + x) * 4;
+    pix[i + 0] = c.r;
+    pix[i + 1] = c.g;
+    pix[i + 2] = c.b;
+    pix[i + 3] = c.a;
+}
 
+PPU::PPU(Console *console)
+    : ram{console->ram}, console{console}, front{std::make_unique<Buffer>()}, back{std::make_unique<Buffer>()} {
     reset();
 }
 
-uint8_t PPU::Read(uint16_t address) {
+uint8_t PPU::Read(const uint16_t address) {
+    return ram->ReadPpuMemory(address);
 }
 
-void PPU::Write(uint16_t address, uint8_t value) {
+void PPU::Write(const uint16_t address, const uint8_t value) {
+    ram->WritePpuMemory(address, value);
 }
-
 
 void PPU::reset() {
     cycle = 340;
@@ -40,22 +48,19 @@ void PPU::writePalette(uint16_t address, const uint8_t value) {
     paletteData[address] = value;
 }
 
-uint8_t PPU::readRegister(const uint16_t address) const {
+uint8_t PPU::readRegister(const uint16_t address) {
     switch (address) {
         case 0x2002:
             return readStatus();
-            break;
         case 0x2004:
             return readOAMData();
-            break;
         case 0x2007:
             return readData();
-            break;
     }
     return 0;
 }
 
-void PPU::writeRegister(uint16_t address, uint8_t value) {
+void PPU::writeRegister(const uint16_t address, const uint8_t value) {
     cpu_register = value;
     switch (address) {
         case 0x2000:
@@ -82,48 +87,46 @@ void PPU::writeRegister(uint16_t address, uint8_t value) {
         case 0x4014:
             writeDMA(value);
             break;
-        default:
-            break;
     }
 }
 
 // $2000: PPUCTRL
 void PPU::writeControl(const uint8_t value) {
-    flagNameTable = value >> 0 & 3;
-    flagIncrement = value >> 2 & 1;
-    flagSpriteTable = value >> 3 & 1;
-    flagBackgroundTable = value >> 4 & 1;
-    flagSpriteSize = value >> 5 & 1;
-    flagMasterSlave = value >> 6 & 1;
-    nmiOutput = (value >> 7 & 1) == 1;
+    flagNameTable = (value >> 0) & 3;
+    flagIncrement = (value >> 2) & 1;
+    flagSpriteTable = (value >> 3) & 1;
+    flagBackgroundTable = (value >> 4) & 1;
+    flagSpriteSize = (value >> 5) & 1;
+    flagMasterSlave = (value >> 6) & 1;
+    nmiOutput = ((value >> 7) & 1) == 1;
     nmiChange();
     // t: ....BA.. ........ = d: ......BA
-    t = t & 0xF3FF | (static_cast<uint16_t>(value) & 0x03) << 10;
+    t = (t & 0xF3FF) | ((static_cast<uint16_t>(value) & 0x03) << 10);
 }
 
 // $2001: PPUMASK
 void PPU::writeMask(const uint8_t value) {
-    flagGrayscale = value >> 0 & 1;
-    flagShowLeftBackground = value >> 1 & 1;
-    flagShowLeftSprites = value >> 2 & 1;
-    flagShowBackground = value >> 3 & 1;
-    flagShowSprites = value >> 4 & 1;
-    flagRedTint = value >> 5 & 1;
-    flagGreenTint = value >> 6 & 1;
-    flagBlueTint = value >> 7 & 1;
+    flagGrayscale = (value >> 0) & 1;
+    flagShowLeftBackground = (value >> 1) & 1;
+    flagShowLeftSprites = (value >> 2) & 1;
+    flagShowBackground = (value >> 3) & 1;
+    flagShowSprites = (value >> 4) & 1;
+    flagRedTint = (value >> 5) & 1;
+    flagGreenTint = (value >> 6) & 1;
+    flagBlueTint = (value >> 7) & 1;
 }
 
 // $2002: PPUSTATUS
 uint8_t PPU::readStatus() {
     uint8_t result = cpu_register & 0x1F;
-    result = result | flagSpriteOverflow << 5;
-    result = result | flagSpriteZeroHit << 6;
+    result |= flagSpriteOverflow << 5;
+    result |= flagSpriteZeroHit << 6;
     if (nmiOccurred) {
-        result = result | 1 << 7;
+        result |= 1 << 7;
     }
     nmiOccurred = false;
     nmiChange();
-    // w: = 0
+    // w:                   = 0
     w = 0;
     return result;
 }
@@ -154,14 +157,14 @@ void PPU::writeScroll(const uint8_t value) {
         // t: ........ ...HGFED = d: HGFED...
         // x:               CBA = d: .....CBA
         // w:                   = 1
-        t = t & 0xFFE0 | static_cast<uint16_t>(value) >> 3;
+        t = (t & 0xFFE0) | (static_cast<uint16_t>(value) >> 3);
         x = value & 0x07;
         w = 1;
     } else {
         // t: .CBA..HG FED..... = d: HGFEDCBA
         // w:                   = 0
-        t = t & 0x8FFF | (static_cast<uint16_t>(value) & 0x07) << 12;
-        t = t & 0xFC1F | (static_cast<uint16_t>(value) & 0xF8) << 2;
+        t = (t & 0x8FFF) | ((static_cast<uint16_t>(value) & 0x07) << 12);
+        t = (t & 0xFC1F) | ((static_cast<uint16_t>(value) & 0xF8) << 2);
         w = 0;
     }
 }
@@ -172,13 +175,13 @@ void PPU::writeAddress(const uint8_t value) {
         // t: ..FEDCBA ........ = d: ..FEDCBA
         // t: .X...... ........ = 0
         // w:                   = 1
-        t = t & 0x80FF | (static_cast<uint16_t>(value) & 0x3F) << 8;
+        t = (t & 0x80FF) | ((static_cast<uint16_t>(value) & 0x3F) << 8);
         w = 1;
     } else {
         // t: ........ HGFEDCBA = d: HGFEDCBA
         // v                    = t
         // w:                   = 0
-        t = t & 0xFF00 | static_cast<uint16_t>(value);
+        t = (t & 0xFF00) | static_cast<uint16_t>(value);
         v = t;
         w = 0;
     }
@@ -189,7 +192,9 @@ uint8_t PPU::readData() {
     uint8_t value = Read(v);
     // emulate buffered reads
     if (v % 0x4000 < 0x3F00) {
-        std::swap(bufferedData, value);
+        const uint8_t buffered = bufferedData;
+        bufferedData = value;
+        value = buffered;
     } else {
         bufferedData = Read(v - 0x1000);
     }
@@ -203,7 +208,7 @@ uint8_t PPU::readData() {
 }
 
 // $2007: PPUDATA (write)
-void PPU::writeData(uint8_t value) {
+void PPU::writeData(const uint8_t value) {
     Write(v, value);
     if (flagIncrement == 0) {
         v += 1;
@@ -213,17 +218,17 @@ void PPU::writeData(uint8_t value) {
 }
 
 // $4014: OAMDMA
-void PPU::writeDMA(uint8_t value) {
-    CPU cpu = console->cpu;
+void PPU::writeDMA(const uint8_t value) {
+    CPU *cpu = console->cpu;
     uint16_t address = static_cast<uint16_t>(value) << 8;
-    for (size_t i = 0; i < 256; i++) {
-        oamData[oamAddress] = cpu.Read(address);
+    for (int i = 0; i < 256; i++) {
+        oamData[oamAddress] = cpu->Read(address);
         oamAddress++;
         address++;
     }
-    cpu.stall += 513;
-    if (cpu.Cycles % 2 == 1) {
-        cpu.stall++;
+    cpu->stall += 513;
+    if (cpu->Cycles % 2 == 1) {
+        cpu->stall++;
     }
 }
 
@@ -267,20 +272,20 @@ void PPU::incrementY() {
             y++;
         }
         // put coarse Y back into v
-        v = v & 0xFC1F | y << 5;
+        v = (v & 0xFC1F) | (y << 5);
     }
 }
 
 void PPU::copyX() {
     // hori(v) = hori(t)
     // v: .....F.. ...EDCBA = t: .....F.. ...EDCBA
-    v = v & 0xFBE0 | t & 0x041F;
+    v = (v & 0xFBE0) | (t & 0x041F);
 }
 
 void PPU::copyY() {
     // vert(v) = vert(t)
     // v: .IHGF.ED CBA..... = t: .IHGF.ED CBA.....
-    v = v & 0x841F | t & 0x7BE0;
+    v = (v & 0x841F) | (t & 0x7BE0);
 }
 
 void PPU::nmiChange() {
@@ -305,48 +310,48 @@ void PPU::clearVerticalBlank() {
 }
 
 void PPU::fetchNameTableByte() {
-    uint16_t address = 0x2000 | v & 0x0FFF;
+    const uint16_t address = 0x2000 | (v & 0x0FFF);
     nameTableByte = Read(address);
 }
 
 void PPU::fetchAttributeTableByte() {
-    const uint16_t address = 0x23C0 | v & 0x0C00 | v >> 4 & 0x38 | v >> 2 & 0x07;
-    const uint16_t shift = v >> 4 & 4 | v & 2;
-    attributeTableByte = (Read(address) >> shift & 3) << 2;
+    const uint16_t address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
+    const uint16_t shift = ((v >> 4) & 4) | (v & 2);
+    attributeTableByte = ((Read(address) >> shift) & 3) << 2;
 }
 
 void PPU::fetchLowTileByte() {
-    const uint16_t fineY = v >> 12 & 7;
-    const uint16_t table = flagBackgroundTable;
-    const uint16_t tile = nameTableByte;
+    const uint16_t fineY = (v >> 12) & 7;
+    const uint8_t table = flagBackgroundTable;
+    const uint8_t tile = nameTableByte;
     const uint16_t address = 0x1000 * table + tile * 16 + fineY;
     lowTileByte = Read(address);
 }
 
 void PPU::fetchHighTileByte() {
-    const uint16_t fineY = v >> 12 & 7;
-    const uint16_t table = flagBackgroundTable;
-    const uint16_t tile = nameTableByte;
+    const uint16_t fineY = (v >> 12) & 7;
+    const uint8_t table = flagBackgroundTable;
+    const uint8_t tile = nameTableByte;
     const uint16_t address = 0x1000 * table + tile * 16 + fineY;
     highTileByte = Read(address + 8);
 }
 
 void PPU::storeTileData() {
-    uint32_t data{};
-    for (size_t i = 0; i < 8; i++) {
+    uint32_t data = 0;
+    for (int i = 0; i < 8; i++) {
         const uint8_t a = attributeTableByte;
         const uint8_t p1 = (lowTileByte & 0x80) >> 7;
         const uint8_t p2 = (highTileByte & 0x80) >> 6;
         lowTileByte <<= 1;
         highTileByte <<= 1;
         data <<= 4;
-        data |= static_cast<uint32_t>(a | p1 | p2);
+        data |= a | p1 | p2;
     }
-    tileData |= static_cast<uint64_t>(data);
+    tileData |= data;
 }
 
 uint32_t PPU::fetchTileData() const {
-    return static_cast<uint32_t>(tileData >> 32);
+    return tileData >> 32;
 }
 
 uint8_t PPU::backgroundPixel() const {
@@ -354,32 +359,31 @@ uint8_t PPU::backgroundPixel() const {
         return 0;
     }
     const uint32_t data = fetchTileData() >> ((7 - x) * 4);
-    return static_cast<uint8_t>(data & 0x0F);
+    return data & 0x0F;
 }
 
 PPU::SpritePixelReturn PPU::spritePixel() const {
     if (flagShowSprites == 0) {
-        return SpritePixelReturn{0, 0};
+        return {0, 0};
     }
-    for (auto i = 0; i < spriteCount; i++) {
-        int64_t offset = cycle - 1 - static_cast<int64_t>(spritePositions[i]);
+    for (int i = 0; i < spriteCount; i++) {
+        int offset = (cycle - 1) - static_cast<int>(spritePositions[i]);
         if (offset < 0 || offset > 7) {
             continue;
         }
         offset = 7 - offset;
-        const uint8_t color = static_cast<uint8_t>(spritePatterns[i] >> static_cast<uint8_t>(offset * 4) & 0x0F);
+        const uint8_t color = (spritePatterns[i] >> (offset * 4)) & 0x0F;
         if (color % 4 == 0) {
             continue;
         }
-        return SpritePixelReturn{static_cast<uint8_t>(i), color};
+        return {static_cast<uint8_t>(i), color};
     }
-    return SpritePixelReturn{0, 0};
+    return {0, 0};
 }
 
-
 void PPU::renderPixel() {
-    int64_t x = cycle - 1;
-    int64_t y = scanline;
+    const int x = cycle - 1;
+    const int y = scanline;
     uint8_t background = backgroundPixel();
     auto [i, sprite] = spritePixel();
     if (x < 8 && flagShowLeftBackground == 0) {
@@ -407,41 +411,40 @@ void PPU::renderPixel() {
             color = background;
         }
     }
-    // todo
-    auto c = Palette[readPalette(uint16_t(color)) % 64];
-    back.SetRGBA(x, y, c);
+    const Color c = Palette[readPalette(color) % 64];
+    back->SetRGBA(x, y, c);
 }
 
-uint32_t PPU::fetchSpritePattern(int32_t i, int32_t row) {
-    auto tile = oamData[i * 4 + 1];
-    auto attributes = oamData[i * 4 + 2];
+uint32_t PPU::fetchSpritePattern(const int i, int row) {
+    uint8_t tile = oamData[i * 4 + 1];
+    const uint8_t attributes = oamData[i * 4 + 2];
     uint16_t address;
     if (flagSpriteSize == 0) {
-        if (attributes & 0x80 == 0x80) {
+        if ((attributes & 0x80) == 0x80) {
             row = 7 - row;
         }
-        auto table = flagSpriteTable;
-        address = 0x1000 * uint16_t(table) + uint16_t(tile) * 16 + uint16_t(row);
+        const uint8_t table = flagSpriteTable;
+        address = 0x1000 * table + tile * 16 + row;
     } else {
-        if (attributes & 0x80 == 0x80) {
+        if ((attributes & 0x80) == 0x80) {
             row = 15 - row;
         }
-        auto table = tile & 1;
+        const uint8_t table = tile & 1;
         tile &= 0xFE;
         if (row > 7) {
             tile++;
             row -= 8;
         }
-        address = 0x1000 * uint16_t(table) + uint16_t(tile) * 16 + uint16_t(row);
+        address = 0x1000 * table + tile * 16 + row;
     }
-    auto a = (attributes & 3) << 2;
-    auto lowTileByte = Read(address);
-    auto highTileByte = Read(address + 8);
-    uint32_t data;
-    for (auto i = 0; i < 8; i++) {
-        std::uint8_t p1;
-        std::uint8_t p2;
-        if (attributes & 0x40 == 0x40) {
+    const uint8_t a = (attributes & 3) << 2;
+    uint8_t lowTileByte = Read(address);
+    uint8_t highTileByte = Read(address + 8);
+    uint32_t data = 0;
+    for (int j = 0; j < 8; j++) {
+        uint8_t p1;
+        uint8_t p2;
+        if ((attributes & 0x40) == 0x40) {
             p1 = (lowTileByte & 1) << 0;
             p2 = (highTileByte & 1) << 1;
             lowTileByte >>= 1;
@@ -453,32 +456,32 @@ uint32_t PPU::fetchSpritePattern(int32_t i, int32_t row) {
             highTileByte <<= 1;
         }
         data <<= 4;
-        data |= uint32_t(a | p1 | p2);
+        data |= a | p1 | p2;
     }
     return data;
 }
 
 void PPU::evaluateSprites() {
-    int32_t h;
+    int h;
     if (flagSpriteSize == 0) {
         h = 8;
     } else {
         h = 16;
     }
-    auto count = 0;
-    for (auto i = 0; i < 64; i++) {
-        auto y = oamData[i * 4 + 0];
-        auto a = oamData[i * 4 + 2];
-        auto x = oamData[i * 4 + 3];
-        auto row = scanline - int(y);
+    int count = 0;
+    for (int i = 0; i < 64; i++) {
+        const uint8_t y = oamData[i * 4 + 0];
+        const uint8_t a = oamData[i * 4 + 2];
+        const uint8_t x = oamData[i * 4 + 3];
+        const int row = scanline - static_cast<int>(y);
         if (row < 0 || row >= h) {
             continue;
         }
         if (count < 8) {
             spritePatterns[count] = fetchSpritePattern(i, row);
             spritePositions[count] = x;
-            spritePriorities[count] = a >> 5 & 1;
-            spriteIndexes[count] = uint8_t(i);
+            spritePriorities[count] = (a >> 5) & 1;
+            spriteIndexes[count] = static_cast<uint8_t>(i);
         }
         count++;
     }
@@ -489,11 +492,12 @@ void PPU::evaluateSprites() {
     spriteCount = count;
 }
 
+// tick updates Cycle, ScanLine and Frame counters
 void PPU::tick() {
     if (nmiDelay > 0) {
         nmiDelay--;
         if (nmiDelay == 0 && nmiOutput && nmiOccurred) {
-            console->cpu.triggerNMI();
+            console->cpu->triggerNMI();
         }
     }
 
@@ -518,17 +522,18 @@ void PPU::tick() {
     }
 }
 
+// step executes a single PPU cycle
 void PPU::step() {
     tick();
 
-    auto renderingEnabled = flagShowBackground != 0 || flagShowSprites != 0;
-    auto preLine = scanline == 261;
-    auto visibleLine = scanline < 240;
-    // postLine := ScanLine == 240
-    auto renderLine = preLine || visibleLine;
-    auto preFetchCycle = cycle >= 321 && cycle <= 336;
-    auto visibleCycle = cycle >= 1 && cycle <= 256;
-    auto fetchCycle = preFetchCycle || visibleCycle;
+    const bool renderingEnabled = flagShowBackground != 0 || flagShowSprites != 0;
+    const bool preLine = scanline == 261;
+    const bool visibleLine = scanline < 240;
+    // const bool postLine = scanline == 240;
+    const bool renderLine = preLine || visibleLine;
+    const bool preFetchCycle = cycle >= 321 && cycle <= 336;
+    const bool visibleCycle = cycle >= 1 && cycle <= 256;
+    const bool fetchCycle = preFetchCycle || visibleCycle;
 
     // background logic
     if (renderingEnabled) {

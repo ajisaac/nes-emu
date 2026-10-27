@@ -1,9 +1,7 @@
 #include "Controller.h"
 
-void Controller::setButtons(bool buttons[8]) {
-    for (int i = 0; i < 8; i++) {
-        this->buttons[i] = buttons[i];
-    }
+void Controller::setButtons(const std::array<bool, 8> &buttons) {
+    this->buttons = buttons;
 }
 
 uint8_t Controller::read() {
@@ -18,7 +16,7 @@ uint8_t Controller::read() {
     return value;
 }
 
-void Controller::write(uint8_t value) {
+void Controller::write(const uint8_t value) {
     this->strobe = value;
     if ((this->strobe & 1) == 1) {
         this->index = 0;

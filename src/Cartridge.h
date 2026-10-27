@@ -1,37 +1,28 @@
 #ifndef NES_EMU_CARTRIDGE_H
 #define NES_EMU_CARTRIDGE_H
 
+#include <cstdint>
 #include <vector>
-#include <fstream>
 
-/*
- Header (16 bytes)
- Trainer, if present (0 or 512 bytes)
- PRG ROM data (16384 * x bytes)
- CHR ROM data, if present (8192 * y bytes)
- PlayChoice INST-ROM, if present (0 or 8192 bytes)
- PlayChoice PROM, if present (16 bytes Data, 16 bytes CounterOut) (this is often missing; see PC10 ROM-Images for details)
- */
+// mirroring modes, the values Cartridge::mirror can hold
+enum {
+    MirrorHorizontal = 0,
+    MirrorVertical = 1,
+    MirrorSingle0 = 2,
+    MirrorSingle1 = 3,
+    MirrorFour = 4
+};
 
 class Cartridge {
 public:
-    std::vector<uint8_t> prg;
-    std::vector<uint8_t> chr;
-    std::vector<uint8_t> sram;
-    uint8_t mapper;
-    uint8_t mirror;
-    uint8_t battery;
+    std::vector<uint8_t> prg;  // PRG-ROM banks
+    std::vector<uint8_t> chr;  // CHR-ROM banks
+    std::vector<uint8_t> sram; // Save RAM
+    uint8_t mapper;            // mapper type
+    uint8_t mirror;            // mirroring mode
+    uint8_t battery;           // battery present
 
-    /**
-     * The beginning of every ines file format
-     */
-    const int MAGIC = 0x1a53454e;
-
-    /**
-     * The first 16 bytes
-     */
-
-    explicit Cartridge(const std::string &path);
+    Cartridge(std::vector<uint8_t> prg, std::vector<uint8_t> chr, uint8_t mapper, uint8_t mirror, uint8_t battery);
 };
 
 #endif //NES_EMU_CARTRIDGE_H

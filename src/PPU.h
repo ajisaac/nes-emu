@@ -1,34 +1,26 @@
 #ifndef NES_EMU_PPU_H
 #define NES_EMU_PPU_H
+#include <array>
 #include <cstdint>
+#include <memory>
+
+#include "Palette.h"
 
 class Console;
 class Ram;
 
 class PPU {
 public:
-    class Rect {
-    public:
-        uint32_t x;
-        uint32_t y;
-        uint32_t w;
-        uint32_t h;
-
-        Rect() = delete;
-
-        Rect(const uint32_t x, const uint32_t y, const uint32_t w, const uint32_t h)
-            : x{x}, y{y}, w{w}, h{h} {
-        }
-    };
-
+    // Buffer is a 256x240 picture laid out like Go's image.RGBA: 4 bytes per
+    // pixel in R, G, B, A order, rows top to bottom
     class Buffer {
     public:
-        Rect rect;
+        static constexpr int width = 256;
+        static constexpr int height = 240;
 
-        Buffer() = delete;
+        std::array<uint8_t, width * height * 4> pix{};
 
-        explicit Buffer(const Rect rect) : rect{rect} {
-        }
+        void SetRGBA(int x, int y, Color c);
     };
 
     struct SpritePixelReturn {
@@ -36,28 +28,28 @@ public:
         uint8_t sprite;
     };
 
-    Ram *ram;
-    Console *console;
+    Ram *ram{};         // memory interface
+    Console *console{}; // reference to parent object
 
-    int32_t cycle{};      // 0-340
-    int32_t scanline{};   // 0-261, 0-239=visible, 240=post, 241-260=vblank, 261=pre
-    uint64_t frame{};     // frame counter
+    int32_t cycle{};    // 0-340
+    int32_t scanline{}; // 0-261, 0-239=visible, 240=post, 241-260=vblank, 261=pre
+    uint64_t frame{};   // frame counter
 
     // storage variables
     uint8_t paletteData[32]{};
     uint8_t nameTableData[2048]{};
     uint8_t oamData[256]{};
-    Buffer front;
-    Buffer back;
+    std::unique_ptr<Buffer> front;
+    std::unique_ptr<Buffer> back;
 
     // PPU registers
-    uint16_t v{};  // current vram address (15 bit)
-    uint16_t t{};  // temporary vram address (15 bit)
-    uint8_t x{};   // fine x scroll (3 bit)
-    uint8_t w{};   // write toggle (1 bit)
-    uint8_t f{};   // even/odd frame flag (1 bit)
+    uint16_t v{}; // current vram address (15 bit)
+    uint16_t t{}; // temporary vram address (15 bit)
+    uint8_t x{};  // fine x scroll (3 bit)
+    uint8_t w{};  // write toggle (1 bit)
+    uint8_t f{};  // even/odd frame flag (1 bit)
 
-    uint8_t cpu_register{};
+    uint8_t cpu_register{}; // last value written to a register (Go: register, a reserved word in C++)
 
     // NMI flags
     bool nmiOccurred{};
@@ -119,7 +111,7 @@ public:
 
     void writePalette(uint16_t address, uint8_t value);
 
-    uint8_t readRegister(uint16_t address) const;
+    uint8_t readRegister(uint16_t address);
 
     void writeRegister(uint16_t address, uint8_t value);
 
@@ -190,14 +182,14 @@ public:
 
     void renderPixel();
 
-    uint32_t fetchSpritePattern(int32_t i, int32_t row);
+    uint32_t fetchSpritePattern(int i, int row);
 
     void evaluateSprites();
 
     // tick updates Cycle, ScanLine and Frame counters
     void tick();
 
-    // Step executes a single PPU cycle
+    // step executes a single PPU cycle
     void step();
 };
 

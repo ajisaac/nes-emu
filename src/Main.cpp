@@ -1,128 +1,123 @@
 #define SDL_MAIN_USE_CALLBACKS 1  /* use the callbacks instead of main() */
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+
+#include <array>
+#include <exception>
+#include <string>
+
 #include "Console.h"
+#include "Graphics.h"
 
+constexpr int scale = 4;               // starting window size as a multiple of the NES resolution
+constexpr int audioSampleRate = 44100; // SDL converts this to whatever the device uses
 
-/* We will use this renderer to draw into this window every frame. */
-static SDL_Window *window = nullptr;
-static SDL_Renderer *renderer = nullptr;
-static SDL_Texture *texture = nullptr;
-
-constexpr uint32_t NES_WIDTH = 256 * 4;
-constexpr uint32_t NES_HEIGHT = 240 * 4;
-constexpr uint32_t WINDOW_WIDTH = NES_WIDTH;
-constexpr uint32_t WINDOW_HEIGHT = NES_HEIGHT;
-
-struct pixel {
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-};
-
+static Graphics *graphics = nullptr;
 static Console *console = nullptr;
-uint64_t timestamp = SDL_GetTicks();
+static SDL_AudioStream *audio = nullptr;
+static uint64_t timestamp = 0; // nanoseconds, from SDL_GetTicksNS
+
+// readKeys maps the keyboard to NES buttons. A and S are turbo A and B, which
+// only press on the frames where turbo is true.
+static std::array<bool, 8> readKeys(const bool turbo) {
+    const bool *keys = SDL_GetKeyboardState(nullptr);
+    std::array<bool, 8> result{};
+    result[ButtonA] = keys[SDL_SCANCODE_Z] || (turbo && keys[SDL_SCANCODE_A]);
+    result[ButtonB] = keys[SDL_SCANCODE_X] || (turbo && keys[SDL_SCANCODE_S]);
+    result[ButtonSelect] = keys[SDL_SCANCODE_RSHIFT];
+    result[ButtonStart] = keys[SDL_SCANCODE_RETURN];
+    result[ButtonUp] = keys[SDL_SCANCODE_UP];
+    result[ButtonDown] = keys[SDL_SCANCODE_DOWN];
+    result[ButtonLeft] = keys[SDL_SCANCODE_LEFT];
+    result[ButtonRight] = keys[SDL_SCANCODE_RIGHT];
+    return result;
+}
+
+static void updateControllers() {
+    const bool turbo = console->ppu->frame % 6 < 3;
+    console->setButtons1(readKeys(turbo));
+}
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
-    SDL_SetAppMetadata("Example Renderer Clear", "1.0", "com.example.renderer-clear");
+    SDL_SetAppMetadata("NES", nullptr, nullptr);
 
-    if (!SDL_Init(SDL_INIT_VIDEO)) {
+    if (argc != 2) {
+        SDL_Log("Usage: %s rom_file", argv[0]);
+        return SDL_APP_FAILURE;
+    }
+    const std::string path{argv[1]};
+
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
         SDL_Log("Couldn't initialize SDL: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
 
-    if (!SDL_CreateWindowAndRenderer("NES", WINDOW_WIDTH, WINDOW_HEIGHT, 0, &window, &renderer)) {
-        SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
+    // one channel of float samples, like Go's chan float32
+    const SDL_AudioSpec spec{.format = SDL_AUDIO_F32, .channels = 1, .freq = audioSampleRate};
+    audio = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
+    if (!audio) {
+        SDL_Log("Couldn't open audio: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
+    SDL_ResumeAudioStreamDevice(audio);
+
+    try {
+        graphics = new Graphics(scale);
+        console = new Console{path};
+    } catch (const std::exception &e) {
+        SDL_Log("%s", e.what());
         return SDL_APP_FAILURE;
     }
 
-    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WINDOW_WIDTH, WINDOW_HEIGHT);
-    if (!texture) {
-        SDL_Log("Couldn't create texture: %s", SDL_GetError());
-        return SDL_APP_FAILURE;
-    }
+    graphics->setTitle(path);
+    console->setAudioChannel([](const float sample) {
+        // Go's channel holds a second of samples and drops new ones when full
+        if (SDL_GetAudioStreamQueued(audio) < audioSampleRate * static_cast<int>(sizeof(float))) {
+            SDL_PutAudioStreamData(audio, &sample, sizeof(sample));
+        }
+    });
+    console->setAudioSampleRate(audioSampleRate);
 
-    const std::string path{"/Users/aaron/Code/nes-emu/data/Nintendo/Castlevania.nes"};
-    console = new Console{path};
-
-    return SDL_APP_CONTINUE;  /* carry on with the program! */
+    timestamp = SDL_GetTicksNS();
+    return SDL_APP_CONTINUE;
 }
 
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
     if (event->type == SDL_EVENT_QUIT) {
-        return SDL_APP_SUCCESS;  /* end the program, reporting success to the OS. */
+        return SDL_APP_SUCCESS;
     }
-    return SDL_APP_CONTINUE;  /* carry on with the program! */
+    if (event->type == SDL_EVENT_KEY_DOWN && !event->key.repeat) {
+        switch (event->key.scancode) {
+            case SDL_SCANCODE_ESCAPE:
+                // Go goes back to the game menu here; there's no menu, so quit
+                return SDL_APP_SUCCESS;
+            case SDL_SCANCODE_R:
+                console->reset();
+                break;
+            default:
+                break;
+        }
+    }
+    return SDL_APP_CONTINUE;
 }
 
 SDL_AppResult SDL_AppIterate(void *appstate) {
-    uint64_t now_ms = SDL_GetTicks();
-    uint64_t delta = now_ms - timestamp;
-    timestamp = now_ms;
-
-    // run game logic, update buffer in console
-
-    if (delta > 1) {
-        delta = 0;
+    const uint64_t now = SDL_GetTicksNS();
+    double dt = static_cast<double>(now - timestamp) / SDL_NS_PER_SECOND;
+    timestamp = now;
+    if (dt > 1) {
+        dt = 0;
     }
 
-    // grab window, grab console, to do controller update stuff
-    // do some sort of joystickReset thing and possibly show menu
-
-    // grab controller input from SDL or whereever
-    // read keys, joysticks, etc
-    // update the console state or something
-
-    // console->stepSeconds(delta);
-    // grab the buffer from the console, draw it with sdl
-    // possibly do other things
-
-
-    SDL_FRect dst_rect{};
-    SDL_Surface *surface = nullptr;
-
-
-    /* we'll have some color move around over a few seconds. */
-
-    if (SDL_LockTextureToSurface(texture, nullptr, &surface)) {
-        // we want an array of rectangles and we'll do the fillsurfacerect each frame with whatever is in the buffer.
-
-
-        pixel pixels[NES_WIDTH * NES_HEIGHT];
-        for (uint32_t i = 0; i < NES_WIDTH * NES_HEIGHT; i++) {
-            pixels[i] = pixel{static_cast<uint8_t>(i % NES_WIDTH), static_cast<uint8_t>(i / NES_HEIGHT), static_cast<uint8_t>(i / NES_WIDTH)};
-        }
-
-        SDL_Rect r{};
-        r.w = 1;
-        r.h = 1;
-        for (uint32_t i = 0; i < NES_WIDTH * NES_HEIGHT; i++) {
-            r.x = i % NES_WIDTH;
-            r.y = i / NES_HEIGHT;
-            SDL_FillSurfaceRect(surface, &r, SDL_MapRGB(SDL_GetPixelFormatDetails(surface->format), nullptr, pixels[i].r, pixels[i].g, pixels[i].b));
-        }
-
-
-        SDL_UnlockTexture(texture);  /* upload the changes (and frees the temporary surface)! */
-    }
-    /* as you can see from this, rendering draws over whatever was drawn before it. */
-    SDL_SetRenderDrawColor(renderer, 66, 66, 66, SDL_ALPHA_OPAQUE);  /* grey, full alpha */
-    SDL_RenderClear(renderer);  /* start with a blank canvas. */
-
-    /* Just draw the static texture a few times. You can think of it like a
-       stamp, there isn't a limit to the number of times you can draw with it. */
-
-    /* Center this one. It'll draw the latest version of the texture we drew while it was locked. */
-    dst_rect.x = 0.0f;
-    dst_rect.y = 0.0f;
-    dst_rect.w = WINDOW_WIDTH;
-    dst_rect.h = WINDOW_HEIGHT;
-    SDL_RenderTexture(renderer, texture, nullptr, &dst_rect);
-    SDL_RenderPresent(renderer);  /* put it all on the screen! */
+    updateControllers();
+    console->stepSeconds(dt);
+    graphics->draw(console->buffer()->pix.data());
 
     return SDL_APP_CONTINUE;
 }
 
 void SDL_AppQuit(void *appstate, SDL_AppResult result) {
+    SDL_DestroyAudioStream(audio);
     delete console;
+    delete graphics;
 }
